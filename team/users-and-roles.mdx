@@ -1,0 +1,138 @@
+---
+title: "Users, Roles, and Permissions"
+description: "Invite teammates, assign admin, deployer, readonly, or viewer roles, and manage user access and permissions across your Compartment organization."
+---
+
+Every person who needs access to your Compartment organization must be invited and assigned a role. Roles determine what a user can see and do. Compartment provides four built-in roles that cover the most common access patterns, from full administrative control down to read-only visibility.
+
+## Roles and permissions
+
+| Role | What they can do |
+| --- | --- |
+| `admin` | Full access: manage users, configure SSO, change organization settings, deploy and manage all projects |
+| `deployer` | Deploy and manage projects and services; cannot manage users, SSO, or organization settings |
+| `readonly` | View projects and deployments; cannot see sensitive variable values or make changes |
+| `viewer` | Read-only access with a narrower scope than `readonly` |
+
+<Info>
+  Roles are hierarchical. `admin` has all the permissions of `deployer`, which has all the permissions of `readonly`, and so on. You cannot grant a subset of permissions within a role.
+</Info>
+
+### Choosing a role
+
+<Tabs>
+  <Tab title="admin">
+    Assign `admin` to organization owners and platform engineers who need to:
+
+    - invite and remove users
+    - configure SSO providers
+    - change organization-level settings
+    - manage all projects and deployments
+
+    ```bash
+    compartment role grant user@example.com admin
+    ```
+  </Tab>
+  <Tab title="deployer">
+    Assign `deployer` to engineers who need to push and manage deployments but should not control who has access to the organization.
+
+    ```bash
+    compartment role grant user@example.com deployer
+    ```
+  </Tab>
+  <Tab title="readonly">
+    Assign `readonly` to team members who need to inspect project state and deployment logs without making changes. Sensitive variable values are hidden for this role.
+
+    ```bash
+    compartment role grant user@example.com readonly
+    ```
+  </Tab>
+  <Tab title="viewer">
+    Assign `viewer` to stakeholders or auditors who need the least possible access.
+
+    ```bash
+    compartment role grant user@example.com viewer
+    ```
+  </Tab>
+</Tabs>
+
+## Invite a user
+
+<Steps>
+  <Step title="Run the invite command">
+    Provide the user's email address and the role you want to assign:
+
+    ```bash
+    compartment user invite <email> --role <role>
+    ```
+
+    For example, to invite a deployer:
+
+    ```bash
+    compartment user invite deploy@example.com --role deployer
+    ```
+  </Step>
+  <Step title="Share the activation URL">
+    If the email address is not already associated with a Compartment account, the CLI prints an activation URL:
+
+    ```text
+    Invited deploy@example.com as deployer.
+    Activation URL: https://your-compartment-host/activate?token=...
+    Invitation expires at: 2026-05-01T12:00:00Z
+    ```
+
+    Send this URL to the new user. They must complete activation before they can log in. If the user already has an account, no activation URL is generated and they gain access immediately.
+  </Step>
+</Steps>
+
+<Warning>
+  Activation URLs are single-use and time-limited. If the invitation expires before the user activates their account, remove the user and invite them again to generate a fresh URL.
+</Warning>
+
+## List users
+
+To see all members of your current organization and their status:
+
+```bash
+compartment user list
+```
+
+Each row shows the user's email address, role, and status. A user's status is either `active` (they have logged in at least once) or `invited` (they have not yet activated their account).
+
+## Grant or change a role
+
+To update a user's role after they have been invited:
+
+```bash
+compartment role grant <email> <role>
+```
+
+For example, to promote a `readonly` user to `deployer`:
+
+```bash
+compartment role grant user@example.com deployer
+```
+
+<Note>
+  You can only grant roles up to your own permission level. A `deployer` cannot grant the `admin` role.
+</Note>
+
+## Remove a user
+
+To revoke a user's access to the current organization:
+
+```bash
+compartment user remove <email>
+```
+
+For example:
+
+```bash
+compartment user remove former-colleague@example.com
+```
+
+Removing a user is immediate. They lose access to all projects and resources in the organization.
+
+<Warning>
+  You cannot remove the last `admin` of an organization. Ensure at least one other `admin` exists before removing your own access.
+</Warning>

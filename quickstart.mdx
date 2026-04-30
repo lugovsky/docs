@@ -1,0 +1,108 @@
+---
+title: "Quick Start"
+description: "Go from zero to a live deployment in four steps. Log in, initialize your project, run compartment deploy, and check your deployment status."
+---
+
+This guide walks you through deploying your first application with Compartment. It assumes you already have Compartment installed on a server and the `compartment` CLI available on your machine. If you haven't installed Compartment yet, start with the [installation guide](/installation).
+
+<Steps>
+  <Step title="Log in to Compartment">
+    Authenticate the CLI against your Compartment installation. Run the following command and enter the email address and password for your Compartment admin account when prompted.
+
+    ```bash
+    compartment login
+    ```
+
+    On success, the CLI prints your email and the organization you're logged into:
+
+    ```text
+    Logged in as you@example.com in your-org
+    ```
+
+    The CLI saves your session locally so you don't need to log in again for subsequent commands. You can pass `--email` to skip the email prompt:
+
+    ```bash
+    compartment login --email you@example.com
+    ```
+  </Step>
+  <Step title="Initialize your project">
+    From the root of your repository, run `compartment init`. This creates a `compartment.yml` file that links your repository to a Compartment project and defines your first service.
+
+    ```bash
+    compartment init
+    ```
+
+    The CLI prompts you for a project name, suggesting the current directory name as a default. You can also pass `--name` to skip the prompt:
+
+    ```bash
+    compartment init --name my-app
+    ```
+
+    The generated `compartment.yml` looks like this:
+
+    ```yaml
+    name: my-app
+    
+    services:
+      web: .
+    ```
+
+    This defines a single service named `web` whose source is the repository root (`.`). Compartment will auto-detect your build toolchain using [Railpack](https://railpack.io). You can edit this file to add more services, set a custom build command, configure readiness checks, and more — see the [compartment.yml reference](/configuration/compartment-yml).
+  </Step>
+  <Step title="Deploy your app">
+    Run `compartment deploy` from the same directory as your `compartment.yml`. Compartment uploads your project descriptor, builds your services on the platform, and promotes them to live traffic once they pass readiness checks.
+
+    ```bash
+    compartment deploy
+    ```
+
+    You'll see build and readiness progress in your terminal. To target a specific environment, use `--env`:
+
+    ```bash
+    compartment deploy --env production
+    ```
+
+    To deploy a single service in a multi-service project, use `--service`:
+
+    ```bash
+    compartment deploy --service api
+    ```
+
+    When the deployment finishes, the CLI prints a summary including the live URL for your app.
+  </Step>
+  <Step title="Check deployment status">
+    After deploying, use `compartment status` to inspect the current state of your project's services and environments.
+
+    ```bash
+    compartment status
+    ```
+
+    This shows which version is live, the health of each service, and any recent deployment events. You can scope the output to a specific project or environment:
+
+    ```bash
+    compartment status --project my-app --env production
+    ```
+  </Step>
+</Steps>
+
+## Next steps
+
+Now that your first app is live, explore what else Compartment can do:
+
+<CardGroup cols={2}>
+  <Card title="Multi-service apps" icon="cubes" href="/guides/multi-service">
+    Add more services to your `compartment.yml` and deploy them as a single unit.
+  </Card>
+
+  <Card title="Environment variables" icon="key" href="/configuration/variables">
+    Manage plain and secret variables scoped to environments or services.
+  </Card>
+
+  <Card title="Zero-downtime deploys" icon="arrow-rotate-right" href="/guides/promote-and-rollback">
+    Understand how Compartment promotes candidates and how to roll back.
+  </Card>
+
+  <Card title="compartment.yml reference" icon="file-code" href="/configuration/compartment-yml">
+    Configure build strategies, readiness checks, and access modes.
+  </Card>
+</CardGroup>

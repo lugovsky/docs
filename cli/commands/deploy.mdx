@@ -1,0 +1,72 @@
+---
+title: "compartment deploy"
+description: "Read compartment.yml from the current directory and deploy one or all services to a named environment, with optional live progress output."
+---
+
+`compartment deploy` reads the `compartment.yml` descriptor in your working directory, builds the specified services, and deploys them to a Compartment environment. By default it targets all services defined in the file and deploys to the `production` environment. Use `--service` to deploy a single service or `--env` to target a different environment. Pass `--verbose` to stream build and promotion progress to your terminal as the deployment runs.
+
+## Usage
+
+```bash
+compartment deploy [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--env <name>` | string | `production` | Name of the target environment. |
+| `--project <name>` | string | — | Override the project name from `compartment.yml`. |
+| `--service <name>` | string | — | Deploy only the named service instead of all services. |
+| `--verbose` | boolean | `false` | Stream live deployment progress to the terminal. Ignored when `--output json` is set. |
+| `--output <format>` | `text` \| `json` | `text` | Output format for the final result. |
+
+<Note>
+  `compartment deploy` requires a valid `compartment.yml` in the current directory. Run `compartment init` first if you have not set one up.
+</Note>
+
+## What deploy does
+
+1. Reads `compartment.yml` from the working directory.
+2. Sends the descriptor to the Compartment control plane along with the target environment name.
+3. The platform builds a container image for each service.
+4. After a successful build, the candidate container starts and Compartment runs any configured readiness checks.
+5. Once the candidate is healthy, traffic switches over and the previous container drains. The deployment is marked `active`.
+
+When the command completes, Compartment prints the final deployment status, including each service's health, promotion stage, and public route URL.
+
+## Output
+
+After a successful deploy, the text output looks similar to this:
+
+```text
+web  active  healthy  https://my-app.example.com
+```
+
+For structured output in CI, use `--output json` to receive the full `DeploymentStatusResponse` payload.
+
+## Examples
+
+<CodeGroup>
+
+```bash Deploy all services to production
+compartment deploy
+```
+
+```bash Deploy to a staging environment
+compartment deploy --env staging
+```
+
+```bash Deploy a single service with live progress
+compartment deploy --service web --verbose
+```
+
+```bash Deploy and capture JSON output in CI
+compartment deploy --output json
+```
+
+</CodeGroup>
+
+<Tip>
+  Use `--verbose` when deploying interactively to watch each promotion stage in real time. For unattended CI runs, omit `--verbose` and parse the JSON result with `--output json`.
+</Tip>

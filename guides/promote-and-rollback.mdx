@@ -1,0 +1,104 @@
+---
+title: "Zero-downtime deployment"
+description: "Understand how Compartment's candidate promotion lifecycle works, how to promote across environments, and how to roll back instantly when something goes wrong."
+---
+
+Every time you run `compartment deploy`, Compartment creates a _candidate_ deployment alongside your currently active one. The candidate progresses through a series of stages before it ever receives live traffic. If anything goes wrong — at any stage — you can roll back to the previous active deployment without any downtime.
+
+## The promotion lifecycle
+
+A deployment moves through these `promotionStage` values in order:
+
+| Stage | What is happening |
+| --- | --- |
+| `building` | Compartment is building the container image for the new deployment. |
+| `starting_candidate` | The new container has started and Compartment is waiting for it to initialize. |
+| `checking_readiness` | Compartment is polling the readiness endpoint (if configured) until the service reports healthy. |
+| `switching_route` | Traffic is being atomically moved from the previous active container to the new one. |
+| `draining_previous` | The old container is finishing any in-flight requests before it is stopped. |
+| `active` | The new deployment is fully live and serving all traffic. |
+| `rolled_back` | A rollback was triggered; a previous deployment has been restored to `active`. |
+
+The deployment reported by `compartment status` always reflects the latest `promotionStage`. A deployment does not receive any live traffic until it reaches `switching_route`.
+
+## Check deployment history
+
+List recent deployments for a project to see their stages and IDs:
+
+```bash
+compartment deployment list --project my-app
+```
+
+Add `--service` to filter by a single service, or `--limit` to control how many records are returned:
+
+```bash
+compartment deployment list --project my-app --service web --limit 10
+```
+
+Use `--output json` if you need machine-readable output for scripting:
+
+```bash
+compartment deployment list --project my-app --output json
+```
+
+## Promote a deployment across environments
+
+`compartment deploy` deploys to `production` by default. To move a build that is already active in one environment into another — for example from `staging` to `production` — use `promote`:
+
+```bash
+compartment promote --from staging --to production --project my-app
+```
+
+`--from` and `--to` are both required. Compartment finds the currently active deployment in the source environment and promotes it through the full candidate lifecycle in the target environment. Add `--verbose` to stream stage-by-stage progress:
+
+```bash
+compartment promote --from staging --to production --project my-app --verbose
+```
+
+To promote a single service rather than every service in a project:
+
+```bash
+compartment promote --from staging --to production --project my-app --service api
+```
+
+<Note>
+  Promotion creates a new deployment record in the target environment and runs the full readiness check cycle. It does not simply re-tag an existing container — the candidate goes through every stage as if it were a fresh deploy.
+</Note>
+
+## Roll back to the previous deployment
+
+If the active deployment is behaving incorrectly, roll back immediately:
+
+```bash
+compartment rollback --project my-app
+```
+
+Compartment promotes the most recent previously-active deployment back to `active` in the target environment, going through `switching_route` and `draining_previous` to maintain zero downtime.
+
+To roll back in a specific environment:
+
+```bash
+compartment rollback --project my-app --env production
+```
+
+To roll back a single service:
+
+```bash
+compartment rollback --project my-app --service web
+```
+
+To roll back to a specific historical deployment by ID (obtained from `compartment deployment list`):
+
+```bash
+compartment rollback --project my-app --to dep_abc123
+```
+
+<Warning>
+  Rollback targets the most recently-succeeded deployment by default. If you need to roll back further, pass `--to` with an explicit deployment ID from `compartment deployment list`.
+</Warning>
+
+## Next steps
+
+- Set up environment-specific deployments — see [Environments](/concepts/environments).
+- Configure readiness checks so the candidate stage works correctly — see [Build options](/configuration/build-options).
+- Promote builds as part of a CI pipeline by passing `--output json` and parsing the result.

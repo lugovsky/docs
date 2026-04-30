@@ -1,0 +1,101 @@
+---
+title: "Organizations"
+description: "An organization is the top-level tenant in Compartment. Group your projects and users under one or more organizations on the same installation."
+---
+
+An organization is the top-level tenant in Compartment. Every project, deployment, and user belongs to exactly one organization. A single Compartment installation can host multiple organizations, which lets you isolate teams, business units, or customers from one another without running separate installations.
+
+## Organization slugs
+
+Each organization has a human-readable **slug** used in CLI commands and API requests. Slugs must:
+
+- contain only lowercase letters (`a–z`) and digits (`0–9`)
+- separate words with single hyphens (`-`)
+- not start or end with a hyphen
+
+Valid examples: `acme`, `acme-corp`, `acme-corp-2`.
+
+## Create an organization
+
+<Steps>
+  <Step title="Log in to the CLI">
+    Make sure you are authenticated before creating an organization.
+
+    ```bash
+    compartment login
+    ```
+  </Step>
+  <Step title="Run the create command">
+    Pass your organization's display name with `--name`. The CLI derives a slug from the name automatically, or you can provide one explicitly with `--slug`.
+
+    ```bash
+    compartment org create --name "My Company"
+    ```
+
+    To set a custom slug:
+
+    ```bash
+    compartment org create --name "My Company" --slug my-company
+    ```
+
+    After creation, the CLI automatically switches your active context to the new organization.
+  </Step>
+</Steps>
+
+<Note>
+  The `--name` flag accepts any display name. The derived slug is normalized to lowercase with hyphens. If the automatic slug conflicts with an existing one, use `--slug` to set it manually.
+</Note>
+
+## List organizations
+
+To see every organization your account belongs to:
+
+```bash
+compartment org list
+```
+
+The output shows each organization's slug and display name, one per line.
+
+## Switch between organizations
+
+All CLI commands operate against your currently active organization. To switch to a different one, pass its slug to `compartment org use`:
+
+```bash
+compartment org use <slug>
+```
+
+For example:
+
+```bash
+compartment org use my-company
+```
+
+The CLI persists this selection in your local config so subsequent commands automatically target `my-company`.
+
+## Making API requests
+
+When calling the Compartment API directly, include the `x-compartment-organization` header to identify which organization the request targets:
+
+```bash
+curl https://your-compartment-host/api/projects \
+  -H "Authorization: Bearer <token>" \
+  -H "x-compartment-organization: my-company"
+```
+
+<Tip>
+  The CLI sets this header automatically based on your active organization context. You only need to set it manually when making raw API calls.
+</Tip>
+
+## Multiple organizations on one installation
+
+A single Compartment installation supports many organizations. This is useful for:
+
+- **Separate teams** — keep engineering, data, and platform teams isolated from each other
+- **Multi-tenant hosting** — provision a dedicated organization for each customer
+- **Environment isolation** — use separate organizations for development and production workloads
+
+Each organization has its own users, roles, projects, and settings. Members of one organization cannot see or access resources in another unless they are explicitly invited.
+
+<Warning>
+  Organization slugs are permanent. Choose a slug that reflects a stable identifier for your team or business unit, since renaming is not supported after creation.
+</Warning>

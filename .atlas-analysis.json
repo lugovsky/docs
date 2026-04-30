@@ -1,0 +1,121 @@
+{
+  "projectType": "saas",
+  "projectName": "Compartment",
+  "projectDescription": "Compartment is a self-hosted application deployment platform that lets teams deploy, manage, and scale services from a single CLI, with built-in environments, variables, SSO, and on-premises installation.",
+  "theme": "luma",
+  "primaryColor": "#4F46E5",
+  "lightColor": "#EEF2FF",
+  "darkColor": "#1E1B4B",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/projects",
+              "concepts/services",
+              "concepts/environments",
+              "concepts/deployments"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/compartment-yml",
+              "configuration/routes",
+              "configuration/variables",
+              "configuration/build-options",
+              "configuration/service-kinds"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/deploy-your-first-app",
+              "guides/multi-service",
+              "guides/promote-and-rollback",
+              "guides/custom-domains",
+              "guides/sso"
+            ]
+          },
+          {
+            "group": "Team Management",
+            "pages": [
+              "team/organizations",
+              "team/users-and-roles"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "cli/overview",
+              "cli/authentication"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/commands/init",
+              "cli/commands/deploy",
+              "cli/commands/status",
+              "cli/commands/logs",
+              "cli/commands/inspect",
+              "cli/commands/promote",
+              "cli/commands/rollback",
+              "cli/commands/variable",
+              "cli/commands/project",
+              "cli/commands/install",
+              "cli/commands/system"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Deploy multi-service applications from a single compartment.yml descriptor",
+    "Zero-downtime deployments with promote and rollback",
+    "Per-environment and per-service runtime variable management",
+    "On-premises self-hosted installation via Docker",
+    "SSO via OIDC (Google and generic providers)",
+    "Role-based access control (admin, deployer, readonly, viewer)",
+    "Automatic build detection: Dockerfile or Railpack",
+    "Browser-facing proxy routing via compartment.routes.yml",
+    "Managed domain allocation for on-prem installs",
+    "CLI with JSON output for CI/CD integration"
+  ],
+  "publicApiSurface": [
+    "compartment init",
+    "compartment deploy",
+    "compartment status",
+    "compartment logs",
+    "compartment inspect",
+    "compartment promote",
+    "compartment rollback",
+    "compartment variable set/get/list/import/remove",
+    "compartment project list/show/rename/archive/unarchive/delete",
+    "compartment login / logout / whoami",
+    "compartment install",
+    "compartment system update/restart/status/domain",
+    "compartment auth settings",
+    "compartment sso oidc",
+    "compartment organization list/create",
+    "compartment role grant",
+    "compartment user invite/list/remove"
+  ]
+}

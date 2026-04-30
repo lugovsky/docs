@@ -1,0 +1,133 @@
+---
+title: "Project"
+description: "A Compartment project links one Git repository to the platform. Learn how projects are named, organized, and managed across their full lifecycle."
+---
+
+A project in Compartment represents a single Git repository. When you run `compartment init` in a repository, Compartment reads the `name` field from the generated `compartment.yml` and registers that value as the project's unique slug on the platform. Every subsequent deploy from that repo is associated with the same project, giving you a stable home for all its services, environments, and deployment history.
+
+## Project names
+
+Project names are the primary identifier for a project across the CLI and the API. They must match the pattern `^[a-z][a-z0-9-]{0,62}$`, which means:
+
+- starts with a lowercase letter
+- contains only lowercase letters, digits, and hyphens
+- is at most 63 characters long
+
+The name lives inside `compartment.yml` at the root of your repository:
+
+```yaml compartment.yml
+name: my-app
+
+services:
+  web: .
+```
+
+<Warning>
+  Renaming a project changes its slug everywhere — including environment URLs and CLI commands that reference it by name. Coordinate renames with your team before running them.
+</Warning>
+
+## What a project contains
+
+Each project groups together everything needed to run your application:
+
+- **Services** — the individual deployable units defined under `services:` in `compartment.yml`
+- **Environments** — named deployment targets such as `production` and `staging`, each with isolated deployments and variables
+- **Deployment history** — a record of every build-and-run attempt for each service in each environment
+
+```yaml compartment.yml
+name: internal-tools
+
+services:
+  web:
+    path: apps/web
+    kind: web
+  api:
+    path: apps/api
+    kind: api
+  worker:
+    path: apps/worker
+    kind: worker
+```
+
+<Info>
+  A project must define at least one service. The `compartment.yml` schema rejects descriptors with an empty `services` map.
+</Info>
+
+## Project lifecycle
+
+Projects move through a simple lifecycle: they start active, can be archived to remove them from the default project list, and can be permanently deleted when no longer needed.
+
+<Steps>
+  <Step title="Create a project">
+    Run `compartment init` in your repository root. Compartment scaffolds a `compartment.yml` with a `name` matching your chosen project slug and registers the project on the platform when you first run `compartment deploy`.
+  </Step>
+  <Step title="List projects">
+    Run `compartment project list` to see all active projects in your organization. Pass `--include-archived` to include archived projects.
+  </Step>
+  <Step title="Inspect a project">
+    Run `compartment project show` inside a repository, or `compartment project show --project <name>` anywhere, to see the project's current remote state and the path to the local descriptor file.
+  </Step>
+  <Step title="Rename a project">
+    Run `compartment project rename <new-name>` to change the project's slug. The new name must satisfy the same naming pattern. Update your `compartment.yml` `name` field to match so future deploys continue to resolve correctly.
+  </Step>
+  <Step title="Archive a project">
+    Run `compartment project archive <name>` to hide a project from the default list without deleting its history. Archived projects can be restored with `compartment project unarchive <name>`.
+  </Step>
+  <Step title="Delete a project">
+    Run `compartment project delete <name>` to permanently remove a project and all associated environments, deployments, and variables. This action is irreversible.
+  </Step>
+</Steps>
+
+<Warning>
+  `compartment project delete` removes all environments, deployments, and variables for the project. There is no undo. Archive first if you are unsure.
+</Warning>
+
+## What `compartment.yml` owns and does not own
+
+The `compartment.yml` file is intentionally scoped. Understanding its boundaries helps you know where to look for different kinds of configuration.
+
+<CodeGroup>
+
+```text What compartment.yml owns
+- the repo-to-project slug link (name:)
+- deployable service names
+- hosted app access hints (accessMode)
+- service-relative paths
+- service build hints
+- service kind hints
+- service runtime-start hints
+- readiness hints
+```
+
+```text What compartment.yml does NOT own
+- secrets
+- environment-specific runtime values
+- node placement
+- hosted domains
+- deployment history
+- browser-facing proxy rules
+```
+
+</CodeGroup>
+
+Environment-specific values such as secrets and runtime variables are managed separately through `compartment variable`. Browser-facing rewrites and proxy rules live in a companion file, `compartment.routes.yml`.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Services" icon="cubes" href="/concepts/services">
+    Learn how to define and configure the individual deployable units inside a project.
+  </Card>
+
+  <Card title="Environments" icon="layer-group" href="/concepts/environments">
+    Understand how environments isolate deployments and variables across stages.
+  </Card>
+
+  <Card title="compartment.yml reference" icon="file-code" href="/configuration/compartment-yml">
+    Full reference for every field in the `compartment.yml` descriptor.
+  </Card>
+
+  <Card title="Deploy your first app" icon="rocket" href="/guides/deploy-your-first-app">
+    Step-by-step guide to creating a project and shipping your first deployment.
+  </Card>
+</CardGroup>

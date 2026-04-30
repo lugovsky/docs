@@ -1,0 +1,108 @@
+---
+title: "Deploy multiple services"
+description: "Define a web frontend and a backend API in a single compartment.yml, configure cross-service routing, and deploy them together or independently."
+---
+
+Compartment lets you define as many services as you need inside a single `compartment.yml`. Each service gets its own build, container, and readiness check, while sharing a project name and routing layer. This guide uses a real example — a `web` frontend and a `backoffice` API — to show the full setup.
+
+## Project structure
+
+The example repository has two runnable services under `services/`:
+
+```text
+my-repo/
+  compartment.yml
+  compartment.routes.yml
+  services/
+    web/
+    backoffice/
+```
+
+## Define services in compartment.yml
+
+Create `compartment.yml` at the repository root:
+
+```yaml
+name: multi-service
+
+services:
+  web:
+    path: ./services/web
+    readiness:
+      type: http
+      path: /healthz
+      timeoutMs: 30000
+
+  backoffice:
+    kind: api
+    path: ./services/backoffice
+    readiness:
+      type: http
+      path: /ready
+      timeoutMs: 30000
+```
+
+Key points:
+
+- **`web`** — the default `kind` (`web`) means Compartment treats this service as the public-facing frontend and exposes it directly.
+- **`backoffice`** — `kind: api` marks this service as an internal API; it is not exposed directly but can receive forwarded traffic from `web`.
+- **`path`** — a path relative to the repository root where Compartment builds and runs that service.
+- **`readiness`** — Compartment polls the given HTTP path before promoting the candidate container to active traffic. The deploy waits up to `timeoutMs` milliseconds for a successful response.
+
+## Configure cross-service routing
+
+Create `compartment.routes.yml` next to `compartment.yml` to forward requests from `web` to `backoffice`:
+
+```yaml
+version: 1
+
+routes:
+  - on: web
+    path: /api/*
+    to: backoffice
+    stripPrefix: /api
+```
+
+This rule tells Compartment: when a request arrives at the `web` service on any path matching `/api/*`, proxy it to `backoffice` and strip the `/api` prefix before forwarding. The `backoffice` service sees the request at the original path without the prefix.
+
+<Note>
+  `compartment.routes.yml` manages browser-facing proxy rules. Secrets, environment-specific values, and domain configuration live outside this file — see [Configuration reference](/configuration/routes) for the full schema.
+</Note>
+
+## Deploy all services
+
+From the repository root, run:
+
+```bash
+compartment deploy
+```
+
+Compartment reads both `compartment.yml` and `compartment.routes.yml`, builds every service in parallel, and applies the routing rules once all services pass their readiness checks.
+
+## Deploy a single service
+
+When you change only one service and want to redeploy just that part, use `--service`:
+
+```bash
+compartment deploy --service backoffice
+```
+
+Compartment builds and promotes only the named service. The other services keep running their current deployments. Routing rules that reference the redeployed service are updated automatically once the new container is active.
+
+<Tip>
+  Deploying a single service is faster and reduces blast radius. Use it for hotfixes or when only one service's code has changed.
+</Tip>
+
+## Check status for all services
+
+```bash
+compartment status --project multi-service
+```
+
+The output lists each service with its promotion stage, health, and route URL.
+
+## Next steps
+
+- Understand the promotion lifecycle — see [Promote and rollback](/guides/promote-and-rollback).
+- Scope environment variables to individual services — see [Variables](/configuration/variables).
+- View the full `compartment.routes.yml` schema — see [Routes configuration](/configuration/routes).

@@ -1,0 +1,141 @@
+---
+title: "Environment"
+description: "Compartment environments are named deployment targets that keep production, staging, and other stages isolated with their own deployments and variables."
+---
+
+An environment in Compartment is a named deployment target that gives each stage of your release process — production, staging, preview, and so on — its own isolated set of deployments and variables. When you run `compartment deploy`, Compartment creates or updates deployments inside the target environment without touching any other environment. Every project starts with a `production` environment, and you can create as many additional environments as your workflow requires.
+
+## Environment names
+
+Environment names are between 1 and 63 characters long with no additional pattern restriction. By convention, use short, lowercase, hyphenated names that reflect the stage's purpose:
+
+- `production`
+- `staging`
+- `preview-feature-x`
+- `qa`
+
+<Info>
+  The default environment name is `production`. If you omit `--env` from any CLI command that accepts one, Compartment targets `production`.
+</Info>
+
+## Deploying to an environment
+
+Pass `--env` to `compartment deploy` to target a specific environment:
+
+```bash
+# Deploy to production (default)
+compartment deploy
+
+# Deploy to staging
+compartment deploy --env staging
+```
+
+Compartment creates the environment on the first deploy if it does not already exist. There is no separate "create environment" step.
+
+## What environments isolate
+
+Each environment maintains its own independent state:
+
+- **Deployments** — builds and running containers are never shared across environments. A deployment in `staging` has no impact on `production`.
+- **Variables** — values set with `compartment variable set` are scoped to an environment. A `DATABASE_URL` in `staging` is a different value from the same variable in `production`.
+- **Active routes** — the live URL for a service in `staging` is separate from its URL in `production`.
+
+This isolation means you can freely experiment in `staging`, roll back in one environment, or promote a specific deployment without affecting any other environment.
+
+## Managing variables
+
+Variables are set per environment and optionally scoped further to a specific service within that environment.
+
+```bash
+# Set a variable for all services in staging
+compartment variable set DATABASE_URL "postgres://..." --env staging
+
+# Set a variable for only the api service in production
+compartment variable set STRIPE_SECRET_KEY "sk_live_..." --env production --service api
+```
+
+Service-scoped variables override environment-wide variables of the same name for that service. This lets you share most variables across services while overriding the ones that differ.
+
+<Tip>
+  Use environment-scoped variables for values shared by all services (such as a database URL), and service-scoped variables for values that are specific to one process (such as a third-party API key used only by the worker).
+</Tip>
+
+## Checking environment status
+
+Use `compartment status` to inspect the active deployments and their health in a given environment:
+
+```bash
+# Check production (default)
+compartment status
+
+# Check staging
+compartment status --env staging
+```
+
+The output shows each service's active deployment, promotion stage, health, and route URL within that environment.
+
+## Promoting across environments
+
+A common workflow is to validate a build in `staging` before promoting it to `production`. Compartment supports this with `compartment promote`:
+
+```bash
+# Deploy to staging first
+compartment deploy --env staging
+
+# After validation, deploy the same code to production
+compartment deploy --env production
+```
+
+For deployments that are already built and running, use `compartment promote` to advance a candidate deployment to active within the same environment without rebuilding.
+
+<Note>
+  Compartment does not currently support cross-environment promotion of a specific container image. To promote work from `staging` to `production`, re-run `compartment deploy` targeting `production` from the same Git commit.
+</Note>
+
+## Multiple environments in practice
+
+A typical team setup uses three environments:
+
+<Steps>
+  <Step title="staging">
+    Developers deploy feature branches here for integration testing. Variables point to a staging database and third-party sandbox accounts.
+  </Step>
+  <Step title="production">
+    The live environment serving real users. Variables point to production infrastructure. Deployments are promoted only after `staging` validation passes.
+  </Step>
+  <Step title="preview environments (optional)">
+    Short-lived environments named after a branch or pull request (for example, `preview-auth-refactor`). Delete them after the feature merges.
+  </Step>
+</Steps>
+
+## Variable scoping rules
+
+When Compartment resolves a variable for a running service, it applies the following priority order — more specific scopes win:
+
+1. **Service-scoped variable** for the specific service in the specific environment — highest priority
+2. **Environment-scoped variable** for the environment, applied to all services
+3. A missing variable causes a runtime error if the service expects it
+
+<Warning>
+  Variables are not inherited across environments. A variable set in `staging` is not automatically available in `production`. You must set each variable explicitly in every environment that needs it.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Deployments" icon="arrow-up-from-bracket" href="/concepts/deployments">
+    Learn how Compartment builds, promotes, and routes deployments inside an environment.
+  </Card>
+
+  <Card title="Variables reference" icon="key" href="/configuration/variables">
+    Full reference for managing plain and secret variables across environments and services.
+  </Card>
+
+  <Card title="Promote and rollback guide" icon="arrow-rotate-left" href="/guides/promote-and-rollback">
+    Step-by-step guide to promoting candidates and rolling back to a previous deployment.
+  </Card>
+
+  <Card title="Projects" icon="folder" href="/concepts/projects">
+    Understand how projects relate to environments and the overall project structure.
+  </Card>
+</CardGroup>

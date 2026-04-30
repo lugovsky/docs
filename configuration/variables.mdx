@@ -1,0 +1,144 @@
+---
+title: "Runtime Variables"
+description: "Manage plain and sensitive runtime variables scoped to an environment or a specific service using the Compartment CLI. Variables are injected at runtime."
+---
+
+Variables let you pass runtime configuration to your services without baking values into your repository. You manage them through the Compartment CLI and the platform injects them as environment variables when your service starts. Variables are never stored in `compartment.yml` — keeping runtime values separate from build-time configuration is a deliberate design choice.
+
+## Variable types
+
+Every variable has a **sensitivity** that controls how Compartment stores and displays its value:
+
+| Sensitivity | Description |
+| --- | --- |
+| `plain` | Value is readable after it is set. |
+| `sensitive` | Value is write-only. Once set, Compartment never returns the value in API responses or CLI output. |
+
+Use `sensitive` for passwords, tokens, API keys, and any other value that should not be readable after it is written.
+
+## Variable scopes
+
+Every variable also has a **scope type** that determines which services receive it:
+
+| Scope type | Description |
+| --- | --- |
+| `environment` | Project-wide. All services in the environment receive the variable unless a service-level variable with the same key overrides it. |
+| `service` | Service-specific. Only the named service receives the variable. A service-level variable overrides any environment-level variable with the same key. |
+
+When you set a variable without specifying a service, it goes to the environment scope and is inherited by every service in that environment.
+
+## Key name rules
+
+Variable key names must satisfy these rules:
+
+- Start with a letter (`A–Z`, `a–z`) or an underscore (`_`)
+- Contain only letters, digits (`0–9`), and underscores
+- Must not start with `COMPARTMENT_` — that prefix is reserved for Compartment-managed runtime metadata
+
+<Warning>
+  Variable names starting with `COMPARTMENT_` are reserved. Compartment will reject any attempt to set a variable with that prefix.
+</Warning>
+
+## Managing variables with the CLI
+
+### Set a variable
+
+```bash
+compartment variable set --project my-app KEY VALUE
+```
+
+Set a variable in the environment scope for the project `my-app`. Compartment prompts you to select an environment if your project has more than one.
+
+To target a specific service scope, add the `--service` flag:
+
+```bash
+compartment variable set --project my-app --service api DATABASE_URL postgres://...
+```
+
+To mark a variable as sensitive:
+
+```bash
+compartment variable set --project my-app --sensitive SECRET_KEY abc123
+```
+
+### List variables
+
+```bash
+compartment variable list --project my-app
+```
+
+Lists all variables visible to the selected scope, including inherited ones. Each entry shows the key name, scope type, sensitivity, and source.
+
+To list variables for a specific service:
+
+```bash
+compartment variable list --project my-app --service api
+```
+
+### Show a variable
+
+```bash
+compartment variable show --project my-app KEY
+```
+
+Shows details for a single variable. For sensitive variables, the value field is hidden — `valueHidden` will be `true` in the response.
+
+### Import variables from a file
+
+```bash
+compartment variable import --project my-app .env
+```
+
+Imports all key-value pairs from a file into the environment scope. The file should contain one `KEY=VALUE` pair per line.
+
+To import into a specific service scope:
+
+```bash
+compartment variable import --project my-app --service api .env.api
+```
+
+To replace existing variables with the imported values rather than merging:
+
+```bash
+compartment variable import --project my-app --replace .env
+```
+
+<Note>
+  Duplicate key names within a single import file are not allowed. Compartment will reject the import if it finds the same key more than once.
+</Note>
+
+### Remove a variable
+
+```bash
+compartment variable remove --project my-app KEY
+```
+
+Removes a variable from the environment scope. To remove a service-scoped variable, add `--service`:
+
+```bash
+compartment variable remove --project my-app --service api KEY
+```
+
+## Exposing variables during the build
+
+Variables are runtime values by default. To expose a variable's value during the build step (for example, a public API URL needed at compile time), list its key name in the `build.env` field of your service config in `compartment.yml`:
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      env:
+        - VITE_PUBLIC_API_URL
+```
+
+Only the key names you list are made available to the build process. Sensitive variables can be listed in `build.env`, but use this carefully — build logs may reveal values that appear in compilation output.
+
+## Inheritance example
+
+Given:
+
+- Environment variable `LOG_LEVEL=info`
+- Service variable `LOG_LEVEL=debug` on the `api` service
+
+The `web` service receives `LOG_LEVEL=info` (inherited from the environment scope). The `api` service receives `LOG_LEVEL=debug` (its service-level value overrides the inherited one).

@@ -1,0 +1,124 @@
+---
+title: "CLI authentication and session management"
+description: "Log in and out of a Compartment instance, check your current identity, switch organizations, and activate a new account using a bootstrap token."
+---
+
+The Compartment CLI stores a session token locally after you log in. You only need to authenticate once per instance — subsequent commands reuse the saved session automatically. This page covers every authentication command, from first login through account activation and organization switching.
+
+## Log in
+
+Use `compartment login` to authenticate against a Compartment instance. Provide the API URL and your email address as flags; the CLI prompts you for your password interactively and saves the session token to your local config.
+
+```bash
+compartment login --api-url https://your-domain.com --email you@example.com
+```
+
+After a successful login, the CLI prints the authenticated identity and the active organization:
+
+```text
+Logged in as you@example.com in my-org
+```
+
+<Note>
+  Your password is never passed as a flag. The CLI always prompts for it interactively so it does not appear in your shell history.
+</Note>
+
+### Login options
+
+| Option | Description |
+| --- | --- |
+| `--api-url <url>` | The base URL of your Compartment instance. |
+| `--email <email>` | Your account email address. |
+| `--output <format>` | Output format: `text` (default) or `json`. |
+
+## Log out
+
+Use `compartment logout` to end your session and remove the saved token from your local config.
+
+```bash
+compartment logout
+```
+
+If you are currently authenticated, the CLI invalidates the session server-side before clearing the local config. The command succeeds even if the server is unreachable — the local token is always removed.
+
+## Check your identity
+
+Use `compartment whoami` to confirm which account and organization your current session belongs to, and which API URL it is authenticated against.
+
+```bash
+compartment whoami
+```
+
+Example output:
+
+```text
+Authenticated as you@example.com in my-org against API https://your-domain.com
+```
+
+Pass `--output json` to get a structured response useful for scripting:
+
+```bash
+compartment whoami --output json
+```
+
+## Switch organizations
+
+If your account belongs to more than one organization, use `compartment org use` to change the active organization context for your local session.
+
+```bash
+compartment org use <slug>
+```
+
+All project and deployment commands run against the active organization, so switch to the right one before running deploys or inspecting status.
+
+## Activate an invited account
+
+When you are invited to a Compartment instance, you receive a bootstrap token. Use `compartment activate` to set your password and create your session in one step.
+
+<Steps>
+  <Step title="Run the activate command">
+    Provide the API URL, your email, and the bootstrap token. The CLI prompts you to set a new password.
+
+    ```bash
+    compartment activate --api-url https://your-domain.com --email you@example.com --token <bootstrap-token>
+    ```
+  </Step>
+  <Step title="Set your password">
+    The CLI prompts you to enter and confirm a password. This becomes your login credential going forward.
+  </Step>
+  <Step title="Session is saved automatically">
+    After activation, the CLI saves your session token locally. You are logged in and ready to use all commands.
+  </Step>
+</Steps>
+
+### Activate options
+
+| Option | Description |
+| --- | --- |
+| `--api-url <url>` | The base URL of your Compartment instance. |
+| `--email <email>` | Your account email address. |
+| `--token <token>` | The bootstrap token from your invitation. |
+| `--output <format>` | Output format: `text` (default) or `json`. |
+
+## Auth settings
+
+Use `compartment auth settings` to view or update the authentication configuration for your current organization. This includes whether password-based login is enabled.
+
+```bash
+# View current auth settings
+compartment auth settings get
+
+# Enable password login
+compartment auth settings set --password enabled
+
+# Disable password login
+compartment auth settings set --password disabled
+```
+
+<Warning>
+  Disabling password login for your organization prevents all members from logging in with email and password. Only do this after confirming that SSO is configured and working for your organization.
+</Warning>
+
+## Session storage
+
+The CLI stores your session in a local config file on your machine. No credentials are stored in your project directory or in `compartment.yml`. If you need to authenticate in a non-interactive environment such as CI, pass all required flags directly and pipe the password using your CI secret management tooling.

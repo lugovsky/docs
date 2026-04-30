@@ -1,0 +1,146 @@
+---
+title: "Service Kinds"
+description: "Understand the five Compartment service kinds and the accessMode field, so you can deploy each part of your application with the right runtime behavior."
+---
+
+Every service in `compartment.yml` has a kind that tells Compartment what role it plays in your application. The kind controls whether the service gets a route URL, whether it handles HTTP traffic, and how the platform manages its lifecycle. You set the kind with the `kind` field in a service config object; if you omit it, Compartment defaults to `web`.
+
+## Available kinds
+
+| Kind | HTTP access | Gets a route URL | Typical use |
+| --- | --- | --- | --- |
+| `web` | Yes | Yes | Browser-facing web frontend |
+| `api` | Yes | Yes | HTTP API consumed by other services or clients |
+| `worker` | No | No | Long-running background processor |
+| `job` | No | No | Short-lived task that runs to completion |
+| `cron` | No | No | Scheduled task triggered on a timer |
+
+## `web`
+
+`web` is the default kind. Use it for services that serve HTTP responses directly to browsers or external clients. Compartment gives a `web` service a route URL and exposes it through the platform's public proxy.
+
+```yaml
+services:
+  web:
+    path: apps/web
+    kind: web        # optional — web is the default
+```
+
+When you set `accessMode: public`, any user with the URL can reach the service without signing in to Compartment. The default `accessMode` is `authenticated`, which requires a valid Compartment session.
+
+## `api`
+
+Use `api` for HTTP services that are not directly browser-facing but still need a route URL — for example, a REST or GraphQL API consumed by your `web` service or by external API clients.
+
+```yaml
+services:
+  api:
+    path: apps/api
+    kind: api
+```
+
+Like `web`, an `api` service is routable and can appear as `on` or `to` in `compartment.routes.yml`. The distinction between `web` and `api` is semantic — it signals intent to other developers and to the platform, but both kinds receive HTTP traffic and a route URL.
+
+## `worker`
+
+Use `worker` for long-running background processes that do not serve HTTP. Workers are deployed and kept alive like web services, but they do not receive a route URL and are not reachable over HTTP.
+
+```yaml
+services:
+  worker:
+    path: apps/worker
+    kind: worker
+```
+
+Typical uses include queue consumers, event stream processors, and services that poll an external data source continuously.
+
+## `job`
+
+Use `job` for a service that runs once to completion and then exits. Compartment does not keep a job service running persistently. No route URL is assigned.
+
+```yaml
+services:
+  migrate:
+    path: tools/migrate
+    kind: job
+```
+
+Jobs are useful for one-off tasks such as database migrations, data imports, or setup scripts that you want to run as part of a deployment.
+
+## `cron`
+
+Use `cron` for a service that runs on a schedule. Like `job`, a cron service has no route URL and no persistent HTTP access.
+
+```yaml
+services:
+  digest:
+    path: apps/digest
+    kind: cron
+```
+
+The `cron` kind marks a service as schedule-driven. Scheduling details are managed outside `compartment.yml`.
+
+## `accessMode`
+
+The `accessMode` field applies to `web` and `api` services. It controls whether Compartment's proxy requires authentication before allowing a request through.
+
+| Value | Description |
+| --- | --- |
+| `authenticated` | Default. Only users with a valid Compartment session can access the service URL. |
+| `public` | Any request is forwarded to the service without authentication. |
+
+```yaml
+services:
+  web:
+    path: apps/web
+    kind: web
+    accessMode: public
+```
+
+<Warning>
+  Setting `accessMode: public` makes your service reachable by anyone with the URL. Use this only for services that implement their own authentication or that you intentionally want to expose publicly, such as a marketing site or a public API.
+</Warning>
+
+`accessMode` has no effect on `worker`, `job`, or `cron` services because those kinds do not receive HTTP traffic.
+
+## Choosing the right kind
+
+<Steps>
+  <Step title="Does the service handle HTTP requests?">
+    If yes, use `web` or `api`. If no, move to the next question.
+  </Step>
+  <Step title="Is it browser-facing or an external HTTP endpoint?">
+    Use `web` for browser-facing services. Use `api` for HTTP services consumed by other services or API clients.
+  </Step>
+  <Step title="Does it run continuously in the background?">
+    If yes, use `worker`.
+  </Step>
+  <Step title="Does it run once and exit?">
+    If yes, use `job`.
+  </Step>
+  <Step title="Does it run on a schedule?">
+    If yes, use `cron`.
+  </Step>
+</Steps>
+
+## Multi-service example
+
+```yaml
+name: internal-tools
+
+services:
+  web:
+    path: apps/web
+    kind: web
+    accessMode: public
+
+  api:
+    path: apps/api
+    kind: api
+
+  worker:
+    path: apps/worker
+    kind: worker
+```
+
+In this example, `web` is publicly accessible, `api` is authenticated by default, and `worker` runs in the background without a route URL.

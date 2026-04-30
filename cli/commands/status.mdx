@@ -1,0 +1,62 @@
+---
+title: "compartment status"
+description: "Display active and recent deployments for a Compartment project, including health, promotion stage, and public route URL for each service."
+---
+
+`compartment status` fetches the current and recent deployment records for a project and prints them to your terminal. For each deployment you can see the service name, runtime health (`pending`, `healthy`, or `unhealthy`), promotion stage, and public route URL. Use this command after a deploy to confirm everything is running, or at any time to get a quick overview of what is live in an environment.
+
+## Usage
+
+```bash
+compartment status [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--project <name>` | string | — | Project to query. Defaults to the name in `compartment.yml` when run from a project directory. |
+| `--env <name>` | string | `production` | Environment to inspect. |
+| `--service <name>` | string | — | Filter results to a single named service. |
+| `--verbose` | boolean | `false` | Show additional deployment fields beyond the default summary. |
+| `--output <format>` | `text` \| `json` | `text` | Output format. Use `json` for scripting and CI integrations. |
+
+## Output fields
+
+Each deployment row includes:
+
+| Field | Description |
+| --- | --- |
+| `serviceName` | The name of the service as defined in `compartment.yml`. |
+| `health` | Runtime health: `pending`, `healthy`, or `unhealthy`. |
+| `promotionStage` | Current stage: `active`, `building`, `checking_readiness`, `starting_candidate`, `switching_route`, `draining_previous`, or `rolled_back`. |
+| `routeUrl` | Public HTTPS URL for the deployment, or `null` if not yet routed. |
+| `status` | Overall runtime status: `queued`, `running`, `succeeded`, or `failed`. |
+
+The response includes both `activeDeployments` (currently serving traffic) and `deployments` (recent history).
+
+## Examples
+
+<CodeGroup>
+
+```bash Check status in the current project directory
+compartment status
+```
+
+```bash Check status for a specific environment
+compartment status --env staging
+```
+
+```bash Filter to a single service
+compartment status --service api
+```
+
+```bash Output JSON for use in a script
+compartment status --output json
+```
+
+</CodeGroup>
+
+<Note>
+  If you run `compartment status` outside a directory that contains a `compartment.yml`, you must supply `--project` to identify the project you want to inspect.
+</Note>

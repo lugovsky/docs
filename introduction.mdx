@@ -1,0 +1,40 @@
+---
+title: "What Is Compartment?"
+description: "Compartment is a self-hosted deployment platform. Define services in compartment.yml, deploy from the CLI, and get zero-downtime rollouts on your own infra."
+---
+
+Compartment is a self-hosted application deployment platform that lets your team ship multi-service applications directly from a Git repository. You define your project in a single `compartment.yml` file, and Compartment takes care of building, routing, health-checking, and promoting your services — all without leaving the terminal.
+
+## Who is Compartment for?
+
+Compartment is built for engineering teams that want full control over their deployment infrastructure without managing complex orchestration systems. If you need to run your own platform — because of data residency requirements, cost, or simply preferring to own your stack — Compartment gives you a production-grade deployment layer that runs on your own servers.
+
+## Key value propositions
+
+**Self-hosted from day one.** Compartment installs entirely on infrastructure you control. There are no third-party build servers, no data leaving your network, and no vendor lock-in. A single `compartment install` command sets up the control plane, container runtime, and routing layer on any server running Docker.
+
+**Multi-service support.** A single `compartment.yml` can define multiple services — a frontend, an API, a background worker — each with its own build strategy, runtime command, and access mode. You deploy and manage the whole application as a unit.
+
+**Zero-downtime deployments.** Compartment builds a candidate version of your app, waits for it to pass readiness checks, then atomically promotes it to live traffic. If a deploy fails its health check, the previous version stays live. You can also roll back manually at any time.
+
+**CLI-first workflow.** Every operation — installing the platform, initializing a project, deploying, checking status — is a single CLI command. There is no required web UI or configuration dashboard to set up before you can ship.
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Log in, initialize your project, and deploy your first app in a few commands.
+  </Card>
+
+  <Card title="Installation" icon="server" href="/installation">
+    Install Compartment on your own server using Docker and the CLI.
+  </Card>
+
+  <Card title="compartment.yml reference" icon="file-code" href="/configuration/compartment-yml">
+    Learn how to configure services, build strategies, and readiness checks.
+  </Card>
+
+  <Card title="CLI reference" icon="terminal" href="/cli/overview">
+    Full documentation for every Compartment CLI command and flag.
+  </Card>
+</CardGroup>

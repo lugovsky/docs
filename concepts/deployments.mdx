@@ -1,0 +1,182 @@
+---
+title: "Deployment"
+description: "A Compartment deployment is one build-and-run instance of a service. Learn its full lifecycle from queued to active, promotion stages, and rollback."
+---
+
+A deployment in Compartment is a single build-and-run instance of one service in one environment. Every time you run `compartment deploy`, Compartment creates a new deployment for each affected service, builds it, and then promotes it through a sequence of stages until it becomes the active deployment serving live traffic — or marks it failed if something goes wrong. The previous active deployment keeps running until the new one is fully healthy, giving you zero-downtime rollouts without any extra configuration.
+
+## Deployment lifecycle
+
+A deployment passes through two parallel tracks as it makes its way to active: a **runtime status** and a **promotion stage**.
+
+### Runtime status
+
+The runtime status describes the overall execution state of the deployment operation:
+
+| Status | Meaning |
+| --- | --- |
+| `queued` | The deployment has been accepted and is waiting for a build slot. |
+| `running` | The deployment is actively progressing through its promotion stages. |
+| `succeeded` | The deployment reached the `active` promotion stage and is now serving traffic. |
+| `failed` | The deployment stopped progressing due to a build error, readiness failure, or other problem. |
+
+### Promotion stages
+
+The promotion stage gives you finer-grained visibility into exactly where in the pipeline a running deployment is:
+
+| Stage | What Compartment is doing |
+| --- | --- |
+| `building` | Compiling or packaging the service image. |
+| `starting_candidate` | Launching the new container alongside the current active deployment. |
+| `checking_readiness` | Polling the service's readiness endpoint and waiting for a healthy response. |
+| `switching_route` | Shifting live traffic from the previous active deployment to the new one. |
+| `draining_previous` | Waiting for in-flight requests to the old container to complete before stopping it. |
+| `active` | The deployment is live and serving all traffic. |
+| `rolled_back` | The deployment was previously active but was superseded by a rollback operation. |
+
+### Health states
+
+Each deployment also carries a health state that reflects the runtime condition of its container:
+
+| Health | Meaning |
+| --- | --- |
+| `pending` | Health has not yet been determined (container is still starting). |
+| `healthy` | The container is running and passing readiness checks. |
+| `unhealthy` | The container has failed its readiness check or crashed. |
+
+## Zero-downtime promotion
+
+Compartment's zero-downtime model works because the new deployment (the "candidate") runs alongside the current active deployment during `starting_candidate` and `checking_readiness`. Traffic does not switch until the candidate is confirmed healthy.
+
+```text
+deploy triggered
+       │
+       ▼
+   building ──────► (build fails → status: failed)
+       │
+       ▼
+ starting_candidate
+       │
+       ▼
+ checking_readiness ──► (timeout or unhealthy → status: failed,
+       │                  previous active keeps serving traffic)
+       ▼
+ switching_route
+       │
+       ▼
+ draining_previous
+       │
+       ▼
+    active  ──────────► status: succeeded
+```
+
+If readiness checking times out or the container becomes unhealthy, the deployment fails and the previous active deployment continues serving traffic with no interruption. Your users see no downtime.
+
+<Tip>
+  Configure a `readiness` block in your service definition to take full advantage of this guarantee. Without a readiness check, Compartment falls through to `active` after the container starts, which may be before your application is fully initialized.
+</Tip>
+
+## Deployment data
+
+Each deployment exposes the following fields, which you can inspect with `compartment status` or `compartment inspect`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier for this deployment. |
+| `serviceName` | string | The service this deployment belongs to. |
+| `status` | runtime status | Overall execution state: `queued`, `running`, `succeeded`, `failed`. |
+| `health` | health state | Container health: `pending`, `healthy`, `unhealthy`. |
+| `promotionStage` | promotion stage | Current stage in the promotion pipeline. |
+| `isActive` | boolean | Whether this deployment is currently serving live traffic. |
+| `routeUrl` | string or null | The live URL for routable services (`web`, `api`). Null for background services. |
+| `failureMessage` | string or null | Human-readable reason if the deployment failed. |
+| `createdAt` | datetime | When the deployment was created. |
+| `completedAt` | datetime or null | When the deployment reached a terminal state. |
+
+## Inspecting deployments
+
+Use `compartment status` to see the current state of all deployments in an environment:
+
+```bash
+# Show all services in production
+compartment status
+
+# Show a specific service in staging
+compartment status --env staging --service api
+```
+
+Use `compartment logs` to stream or fetch recent output from a running deployment:
+
+```bash
+# Print recent logs for all services in production
+compartment logs
+
+# Stream logs for a specific service
+compartment logs --service worker --env staging
+```
+
+## Log streams
+
+Each deployment produces output across three log streams:
+
+| Stream | Content |
+| --- | --- |
+| `compartment` | Platform-level events: build output, promotion stage transitions, errors. |
+| `stdout` | Standard output from the running container process. |
+| `stderr` | Standard error from the running container process. |
+
+All streams are timestamped and include the deployment ID, service name, and environment name for easy filtering.
+
+## Rollback
+
+If an active deployment causes problems, you can roll back to the previous active deployment for a service without rebuilding:
+
+```bash
+compartment rollback --service web
+compartment rollback --service web --env staging
+```
+
+Compartment promotes the most recent previously-active deployment back to `active` and marks the current active deployment as `rolled_back`. The rollback itself is a promotion-stage transition, so it goes through `switching_route` and `draining_previous` — preserving zero-downtime behavior even during rollback.
+
+<Warning>
+  Rollback targets the most recent deployment that was previously `active` for the given service and environment. If no previous active deployment exists (for example, on the very first deploy), rollback is not available.
+</Warning>
+
+## Deployment logs example
+
+The following snippet shows what a typical deployment log stream looks like, including the `compartment` stream events for promotion stage changes:
+
+```text
+2026-04-24T10:01:00Z [compartment] deployment abc123 created for service web
+2026-04-24T10:01:01Z [compartment] stage: building
+2026-04-24T10:01:45Z [stdout]      > web@1.0.0 build
+2026-04-24T10:01:45Z [stdout]      vite v5.0.0 building for production...
+2026-04-24T10:02:10Z [compartment] build complete
+2026-04-24T10:02:11Z [compartment] stage: starting_candidate
+2026-04-24T10:02:15Z [stdout]      server listening on :3000
+2026-04-24T10:02:15Z [compartment] stage: checking_readiness
+2026-04-24T10:02:16Z [compartment] GET /ready → 200 OK
+2026-04-24T10:02:16Z [compartment] stage: switching_route
+2026-04-24T10:02:17Z [compartment] stage: draining_previous
+2026-04-24T10:02:19Z [compartment] stage: active — deployment succeeded
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Promote and rollback guide" icon="arrow-rotate-left" href="/guides/promote-and-rollback">
+    Hands-on guide to promoting candidates and recovering from a failed deployment.
+  </Card>
+
+  <Card title="Environments" icon="layer-group" href="/concepts/environments">
+    Learn how environments isolate deployments and variables across your release stages.
+  </Card>
+
+  <Card title="Services" icon="cubes" href="/concepts/services">
+    Configure readiness checks and other per-service settings that govern promotion.
+  </Card>
+
+  <Card title="CLI: deploy command" icon="terminal" href="/cli/commands/deploy">
+    Full reference for `compartment deploy` flags and options.
+  </Card>
+</CardGroup>

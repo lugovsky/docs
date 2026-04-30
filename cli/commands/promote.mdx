@@ -1,0 +1,47 @@
+---
+title: "compartment promote"
+description: "Promote a candidate deployment from one environment to another, switching live traffic without a new build. Supports verbose progress output and JSON output."
+---
+
+`compartment promote` takes a deployment that exists in one environment and makes it the active deployment in another. No new build runs — the exact same built artifact is promoted, so traffic switches immediately once the promoted deployment passes its readiness checks. Use this command after reviewing a candidate in a staging environment, or as part of an automated promotion pipeline.
+
+## Usage
+
+```bash
+compartment promote --from <env> --to <env> [options]
+```
+
+Both `--from` and `--to` are required. If your project has multiple services, use `--service` to target a specific one; otherwise all services in the project are promoted together.
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--from <name>` | string | — | **Required.** Name of the source environment to promote from. |
+| `--to <name>` | string | — | **Required.** Name of the target environment to promote to. |
+| `--project <name>` | string | — | Project slug to target. If omitted, Compartment reads the project name from `compartment.yml` in the current directory. |
+| `--service <name>` | string | — | Limit promotion to a single named service. If omitted, all services in the project are promoted. |
+| `--verbose` | boolean | — | Print deployment progress events to the terminal as they occur. Only applies when `--output` is `text`. |
+| `--output <format>` | `text` \| `json` | `text` | Output format. Use `json` for machine-readable results in CI pipelines. |
+
+## Examples
+
+```bash Promote staging to production after a review
+compartment promote --from staging --to production
+```
+
+```bash Promote a specific service only
+compartment promote --from staging --to production --service api
+```
+
+```bash Promote with live progress output and JSON result
+compartment promote --from staging --to production --verbose --output json
+```
+
+<Tip>
+  Pass `--output json` in CI pipelines to capture structured output that includes the promoted deployment ID, environment name, and final status. You can use this to gate downstream steps on a successful promotion.
+</Tip>
+
+<Note>
+  If you run `compartment promote` without `--project`, the command looks for a `compartment.yml` file in the current directory to determine the project name. Run the command from your repository root, or pass `--project` explicitly when running outside the project directory.
+</Note>

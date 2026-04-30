@@ -1,0 +1,117 @@
+---
+title: "Custom domain"
+description: "Point your own domain at a self-hosted Compartment installation, set DNS records, choose a TLS mode, and verify the domain is healthy using the CLI."
+---
+
+By default, Compartment uses a built-in managed domain for your installation. When you are ready to serve traffic from your own domain — for example `apps.example.com` — use the `compartment system domain` commands to configure it. Compartment assigns each project and service a subdomain under the base domain you set, so a project named `my-app` would be reachable at `my-app.apps.example.com`.
+
+## Prerequisites
+
+- You must run `compartment system domain` commands on the Compartment host machine (or with equivalent on-premises credentials). The CLI will prompt for elevated permissions if required.
+- You need the ability to create DNS records for the domain you want to use.
+
+## Step 1: Create an A record
+
+Before configuring Compartment, add an A record (or a wildcard A record) in your DNS provider that points to the public IP address of your Compartment server:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| `A` | `*.apps.example.com` | `<your-server-ip>` |
+
+A wildcard record (`*.apps.example.com`) covers all subdomains that Compartment will create for your projects and services. You can also add individual records per project, but a wildcard is simpler for ongoing use.
+
+<Warning>
+  DNS changes can take minutes to hours to propagate worldwide, depending on your registrar's TTL settings. Run `compartment system domain verify` only after you are confident the record has propagated — the command checks that the domain resolves correctly before activating HTTPS.
+</Warning>
+
+## Step 2: Set the base domain
+
+Run `domain set` to tell Compartment which base domain to use:
+
+```bash
+compartment system domain set --base-domain apps.example.com
+```
+
+By default this configures HTTPS with external TLS termination (your reverse proxy or load balancer handles certificates). You can customise both options:
+
+<CodeGroup>
+
+```bash HTTPS with external TLS (default)
+compartment system domain set \
+  --base-domain apps.example.com \
+  --public-scheme https \
+  --tls external
+```
+
+```bash HTTPS with a custom certificate
+compartment system domain set \
+  --base-domain apps.example.com \
+  --public-scheme https \
+  --tls custom-cert
+```
+
+```bash HTTP only
+compartment system domain set \
+  --base-domain apps.example.com \
+  --public-scheme http
+```
+
+</CodeGroup>
+
+**`--public-scheme`** controls whether Compartment generates `http://` or `https://` URLs for your projects. Accepted values: `https` (default), `http`.
+
+**`--tls`** controls how TLS is terminated. Accepted values:
+
+- `external` (default) — your upstream proxy terminates TLS; Compartment trusts it.
+- `custom-cert` — you supply your own certificate files (requires `--public-scheme https`).
+
+## Step 3: Attach a custom certificate (custom-cert mode only)
+
+If you chose `--tls custom-cert`, attach your certificate and private key:
+
+```bash
+compartment system domain attach-cert \
+  --cert-file /path/to/fullchain.pem \
+  --key-file /path/to/privkey.pem
+```
+
+Both files must be PEM-encoded. Use a full-chain certificate (leaf \+ any intermediates) for `--cert-file`.
+
+## Step 4: Verify the domain
+
+Check that DNS has propagated and the domain configuration is consistent:
+
+```bash
+compartment system domain verify
+```
+
+## Step 5: Activate the domain
+
+Once verification passes, activate the new domain configuration so Compartment starts routing traffic through it:
+
+```bash
+compartment system domain activate
+```
+
+## Check domain status
+
+At any time, inspect the current domain configuration and health:
+
+```bash
+compartment system domain status
+```
+
+The output shows the active host plan (`baseDomain`, `publicScheme`, `tlsMode`), any pending operation, and the health of the active domain endpoint.
+
+## Reset to the managed domain
+
+To revert to Compartment's built-in managed domain:
+
+```bash
+compartment system domain reset-managed
+```
+
+## Next steps
+
+- Check that your projects are reachable at their new subdomains using `compartment status --project <name>`.
+- Configure SSO so your team can authenticate via your identity provider — see [Set up SSO with OIDC](/guides/sso).

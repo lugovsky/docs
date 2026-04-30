@@ -1,0 +1,97 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "Compartment",
+  "theme": "luma",
+  "colors": {
+    "primary": "#4F46E5",
+    "light": "#EEF2FF",
+    "dark": "#1E1B4B"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/uibakery/platform"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/projects",
+              "concepts/services",
+              "concepts/environments",
+              "concepts/deployments"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/compartment-yml",
+              "configuration/routes",
+              "configuration/variables",
+              "configuration/build-options",
+              "configuration/service-kinds"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/deploy-your-first-app",
+              "guides/multi-service",
+              "guides/promote-and-rollback",
+              "guides/custom-domains",
+              "guides/sso"
+            ]
+          },
+          {
+            "group": "Team Management",
+            "pages": [
+              "team/users-and-roles",
+              "team/organizations"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "cli/overview",
+              "cli/authentication"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/commands/init",
+              "cli/commands/deploy",
+              "cli/commands/status",
+              "cli/commands/logs",
+              "cli/commands/inspect",
+              "cli/commands/promote",
+              "cli/commands/rollback",
+              "cli/commands/variable",
+              "cli/commands/project",
+              "cli/commands/install",
+              "cli/commands/system"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

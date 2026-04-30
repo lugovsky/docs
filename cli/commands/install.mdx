@@ -1,0 +1,78 @@
+---
+title: "compartment install"
+description: "Install the Compartment control plane, container runtime, and routing layer on a Docker server. Configure domain, ports, organization, and image version."
+---
+
+`compartment install` sets up a complete Compartment deployment on the target machine. It installs the control plane, container runtime, and routing layer, then creates the first admin account and organization. When the install finishes, the CLI prints the admin credentials and the URLs you need to log in and start deploying projects.
+
+<Warning>
+  Run `compartment install` on a fresh server dedicated to Compartment. The installer configures Docker networking, system ports, and routing rules that may conflict with other services already running on the machine.
+</Warning>
+
+## Usage
+
+```bash
+compartment install [options]
+```
+
+You can pass all options as flags for a fully non-interactive install, or omit optional ones and the CLI prompts you interactively for any required values.
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--base-domain <domain>` | string | — | The base domain for this Compartment installation, for example `deploy.example.com`. All project environments are served as subdomains of this domain. |
+| `--managed-domain` | boolean | — | Allocate a managed install domain through the Compartment broker instead of providing your own. Cannot be used together with `--base-domain`. |
+| `--email <email>` | string | — | Email address for the first admin account. The CLI prompts interactively if omitted. |
+| `--organization <name>` | string | — | Display name for the first organization. The CLI prompts interactively if omitted. |
+| `--organization-slug <slug>` | string | — | URL slug for the first organization. If omitted, Compartment derives one from `--organization`. |
+| `--public-http-port <port>` | string | — | Public HTTP port to expose, for example `80`. Defaults to the standard port for your setup if omitted. |
+| `--public-https-port <port>` | string | — | Public HTTPS port to expose, for example `443`. Defaults to the standard port for your setup if omitted. |
+| `--version <version>` | string | `latest` | Image version to install. Accepts `latest`, `main`, `sha-<commit>`, or an exact image tag. |
+| `--image-source <source>` | `registry` \| `local` | `registry` | Where to pull images from. Use `registry` for the standard production install, or `local` for images already present on the machine. |
+| `--output <format>` | `text` \| `json` | `text` | Output format. Use `json` to capture the install result in automation scripts. |
+
+## Version selection
+
+| Value | Meaning |
+| --- | --- |
+| `latest` | The most recent stable release. Recommended for production installs. |
+| `main` | The latest build from the main branch. May contain unreleased changes. |
+| `sha-<commit>` | A build pinned to a specific Git commit SHA. |
+| exact image tag | A fully specified image tag, for example `1.2.3`. |
+
+## Examples
+
+```bash Interactive install using the managed domain service
+compartment install --managed-domain
+```
+
+```bash Non-interactive install with a custom domain and organization
+compartment install \
+  --base-domain deploy.example.com \
+  --email admin@example.com \
+  --organization "Acme Corp" \
+  --organization-slug acme
+```
+
+```bash Install a pinned version with custom ports
+compartment install \
+  --base-domain deploy.example.com \
+  --version 1.4.2 \
+  --public-http-port 8080 \
+  --public-https-port 8443
+```
+
+After a successful install, the CLI prints a summary that includes:
+
+- The admin email and a generated initial password
+- The control plane URL
+- The first organization slug
+
+<Tip>
+  Save the credentials printed at the end of the install. The initial admin password is shown once. If you lose it, you need to reset it directly on the server.
+</Tip>
+
+<Note>
+  The target machine must have Docker installed and running before you run `compartment install`. The CLI validates Docker availability as part of the install preflight checks and exits with an error if Docker is not found.
+</Note>

@@ -1,0 +1,157 @@
+---
+title: "SSO with OIDC"
+description: "Configure SSO for Compartment using Google or any generic OIDC provider. Add, list, update, and remove providers with the compartment sso oidc commands."
+---
+
+Compartment supports OIDC-based single sign-on so your team can authenticate with an existing identity provider instead of managing separate credentials. You configure SSO providers per organization, and members sign in using the button that appears on the Compartment login page.
+
+## Prerequisites
+
+- You must be logged in as an organization admin: `compartment login`
+- You need a registered application (client) in your identity provider with a client ID and client secret
+- Your OIDC provider must support the `openid` scope — this is required for all configurations
+
+## Add a Google provider
+
+Google is a supported preset that pre-fills the issuer URL and default scope. You only need your OAuth 2.0 client credentials from the [Google Cloud Console](https://console.cloud.google.com):
+
+```bash
+compartment sso oidc add \
+  --preset google \
+  --client-id 123456789-abc.apps.googleusercontent.com \
+  --client-secret GOCSPX-your-client-secret
+```
+
+The `google` preset defaults to the `openid email profile` scope. If you need a different scope, pass `--scope` explicitly — it must include `openid`:
+
+```bash
+compartment sso oidc add \
+  --preset google \
+  --client-id 123456789-abc.apps.googleusercontent.com \
+  --client-secret GOCSPX-your-client-secret \
+  --scope "openid email"
+```
+
+Compartment uses `Google` as the button label on the login page by default. Customize it with `--button-text`:
+
+```bash
+compartment sso oidc add \
+  --preset google \
+  --client-id 123456789-abc.apps.googleusercontent.com \
+  --client-secret GOCSPX-your-client-secret \
+  --button-text "Sign in with Google Workspace"
+```
+
+## Add a generic OIDC provider
+
+For any OIDC-compliant provider (Okta, Auth0, Microsoft Entra, Keycloak, and others), use the `generic` preset. You must also supply `--issuer-url` and `--display-name`:
+
+```bash
+compartment sso oidc add \
+  --preset generic \
+  --client-id your-client-id \
+  --client-secret your-client-secret \
+  --issuer-url https://your-org.okta.com \
+  --display-name "Okta"
+```
+
+**`--issuer-url`** is the base URL of the OIDC discovery document. Compartment fetches `<issuer-url>/.well-known/openid-configuration` to resolve endpoints automatically.
+
+**`--display-name`** is shown as the button label on the Compartment login page and in `compartment sso oidc list` output.
+
+**`--scope`** defaults to `openid email profile` if omitted. Override it when your provider needs a specific set of scopes — `openid` must always be included:
+
+```bash
+compartment sso oidc add \
+  --preset generic \
+  --client-id your-client-id \
+  --client-secret your-client-secret \
+  --issuer-url https://login.microsoftonline.com/tenant-id/v2.0 \
+  --display-name "Microsoft Entra" \
+  --scope "openid email profile offline_access"
+```
+
+## Provider presets compared
+
+| Option | `google` | `generic` |
+| --- | --- | --- |
+| `--issuer-url` | Pre-filled | Required |
+| `--display-name` | Optional (defaults to `Google`) | Required |
+| `--scope` | Optional (defaults to `openid email profile`) | Optional (defaults to `openid email profile`) |
+| `--button-text` | Optional | Optional |
+
+## List configured providers
+
+```bash
+compartment sso oidc list
+```
+
+The output shows each provider's display name, preset, and ID. Save the ID — you need it for `update` and `remove`.
+
+## Update a provider
+
+Pass the provider ID from `compartment sso oidc list` and re-supply all fields you want to change:
+
+```bash
+compartment sso oidc update <providerId> \
+  --preset google \
+  --client-id 123456789-abc.apps.googleusercontent.com \
+  --client-secret GOCSPX-new-client-secret
+```
+
+`update` replaces the stored configuration for that provider. Fields you omit are cleared, so always pass the full set of options you want to keep.
+
+## Remove a provider
+
+```bash
+compartment sso oidc remove <providerId>
+```
+
+Removing a provider immediately prevents users from signing in through it. Existing sessions are not affected until they expire.
+
+## Advanced: custom identity verification claims
+
+By default, Compartment reads the user's email address and verification status from the standard `email` and `email_verified` claims in the ID token. If your provider uses non-standard claim names, you can override them.
+
+<Tabs>
+  <Tab title="Custom email claim">
+    ```bash
+    compartment sso oidc add \
+      --preset generic \
+      --client-id your-client-id \
+      --client-secret your-client-secret \
+      --issuer-url https://sso.example.com \
+      --display-name "Example SSO" \
+      --email-claims "id-token:mail"
+    ```
+  </Tab>
+  <Tab title="Custom verified-email claim">
+    ```bash
+    compartment sso oidc add \
+      --preset generic \
+      --client-id your-client-id \
+      --client-secret your-client-secret \
+      --issuer-url https://sso.example.com \
+      --display-name "Example SSO" \
+      --verified-email-claims "userinfo:verified_email"
+    ```
+  </Tab>
+  <Tab title="Require a specific claim value">
+    ```bash
+    compartment sso oidc add \
+      --preset generic \
+      --client-id your-client-id \
+      --client-secret your-client-secret \
+      --issuer-url https://sso.example.com \
+      --display-name "Example SSO" \
+      --email-verified-claims "id-token:email_verified=true"
+    ```
+  </Tab>
+</Tabs>
+
+Claim references follow the format `<source>:<claim>`, where `<source>` is either `id-token` (or `id_token`) for the OIDC ID token, or `userinfo` for the userinfo endpoint. Multiple claims can be provided as a comma-separated list.
+
+## Next steps
+
+- Manage team members and roles — see [Users and roles](/team/users-and-roles).
+- Combine SSO with a custom domain so your login page uses your own URL — see [Custom domains](/guides/custom-domains).

@@ -1,0 +1,84 @@
+---
+title: "Deploy your first app"
+description: "Go from an empty directory to a live deployment in minutes. Initialize a project, write a compartment.yml, and ship your first app with the Compartment CLI."
+---
+
+This guide walks you through the complete deployment workflow: initializing a project, deploying it, and checking that everything is running. By the end you'll have a live app managed by Compartment.
+
+<Note>
+  You must be logged in before running any of these commands. If you haven't authenticated yet, run `compartment login` and follow the prompts.
+</Note>
+
+<Steps>
+  <Step title="Initialize your project">
+    Navigate to your repository root and run `init` to create a `compartment.yml` descriptor:
+
+    ```bash
+    compartment init --name my-app
+    ```
+
+    Pass `--name` a lowercase, hyphen-separated slug that uniquely identifies your project. If you omit the flag in an interactive terminal, the CLI will prompt you with a suggested name derived from the current directory.
+
+    The command creates `compartment.yml` at the repository root:
+
+    ```yaml
+    name: my-app
+    
+    services:
+      web: .
+    ```
+
+    This minimal descriptor tells Compartment to deploy one service named `web` from the repository root. The service name, build path, and additional options can all be expanded — run `compartment descriptor schema` to see the full schema.
+  </Step>
+  <Step title="Deploy your app">
+    From the same directory, run:
+
+    ```bash
+    compartment deploy
+    ```
+
+    Compartment reads `compartment.yml`, builds your service, runs readiness checks, and promotes the new build to live traffic. The CLI streams progress as the deployment moves through each stage.
+
+    If you have multiple projects and want to be explicit, pass `--project`:
+
+    ```bash
+    compartment deploy --project my-app
+    ```
+
+    To target a specific environment other than the default `production`, use `--env`:
+
+    ```bash
+    compartment deploy --env staging
+    ```
+  </Step>
+  <Step title="Check deployment status">
+    Once the deploy command completes, confirm the project is live:
+
+    ```bash
+    compartment status --project my-app
+    ```
+
+    The output shows each service, its current promotion stage, health status, and the URL where it is reachable. A healthy deployment reports `active` as the promotion stage.
+  </Step>
+  <Step title="View logs">
+    Inspect live or recent output from your service:
+
+    ```bash
+    compartment logs --project my-app
+    ```
+
+    Use `--service` to narrow output to a single service when your project has more than one:
+
+    ```bash
+    compartment logs --project my-app --service web
+    ```
+
+    Logs include both your application's stdout/stderr and Compartment's own runtime events.
+  </Step>
+</Steps>
+
+## Next steps
+
+- Add a second service or configure routing — see [Multi-service apps](/guides/multi-service).
+- Learn how the build-to-active promotion lifecycle works — see [Promote and rollback](/guides/promote-and-rollback).
+- Expand your `compartment.yml` with build commands, environment variables, and readiness checks — see [Configuration reference](/configuration/compartment-yml).

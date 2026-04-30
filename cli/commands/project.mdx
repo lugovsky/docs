@@ -1,0 +1,152 @@
+---
+title: "compartment project"
+description: "List, inspect, rename, archive, and delete Compartment projects from the CLI. Archived projects retain all data but are hidden from default listings."
+---
+
+`compartment project` is a subcommand group for managing projects in your Compartment organization. A project is the top-level container for your services, environments, and deployments. You can list all projects, inspect a specific one, rename it, archive it when it is no longer active, or permanently delete it when you no longer need it.
+
+## Subcommands
+
+<Tabs>
+  <Tab title="list">
+    List all active projects in the current organization. Pass `--all` to include archived projects in the output.
+
+    ```bash
+    compartment project list [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--all` | boolean | — | Include archived projects in the listing. Without this flag, only active projects are shown. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash List active projects
+    compartment project list
+    ```
+
+    ```bash List all projects including archived ones
+    compartment project list --all
+    ```
+  </Tab>
+  <Tab title="show">
+    Show details for a single project, including its remote state and the path to its local descriptor file if one is present in the working directory.
+
+    ```bash
+    compartment project show [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Project slug to inspect. If omitted, Compartment reads the project name from `compartment.yml` in the current directory. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Show the project linked to the current directory
+    compartment project show
+    ```
+
+    ```bash Show a specific project by slug
+    compartment project show --project my-app
+    ```
+  </Tab>
+  <Tab title="rename">
+    Rename a project. The new name must be a valid project slug. If the current directory contains a `compartment.yml` that references the old project name, Compartment updates the file automatically.
+
+    ```bash
+    compartment project rename <new-name> [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Slug of the project to rename. If omitted, read from `compartment.yml` in the current directory. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Rename the project linked to the current directory
+    compartment project rename my-app-v2
+    ```
+
+    ```bash Rename a specific project by slug
+    compartment project rename my-app-v2 --project my-app
+    ```
+  </Tab>
+  <Tab title="archive">
+    Archive a project. Archived projects retain all data — deployments, environments, variables, and history — but they are hidden from default `project list` output and cannot accept new deployments. Use archiving when a project is inactive but you want to keep its history.
+
+    ```bash
+    compartment project archive [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Project slug to archive. If omitted, read from `compartment.yml` in the current directory. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Archive the project in the current directory
+    compartment project archive
+    ```
+
+    ```bash Archive a specific project by slug
+    compartment project archive --project my-old-app
+    ```
+  </Tab>
+  <Tab title="unarchive">
+    Restore an archived project to active status. After unarchiving, the project appears in default listings and can accept new deployments again.
+
+    ```bash
+    compartment project unarchive [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Project slug to unarchive. If omitted, read from `compartment.yml` in the current directory. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Unarchive a project by slug
+    compartment project unarchive --project my-old-app
+    ```
+  </Tab>
+  <Tab title="delete">
+    Permanently delete a project and all associated data, including deployments, environments, and variables. This action cannot be undone. Both `--project` and `--yes` are required to prevent accidental deletions.
+
+    ```bash
+    compartment project delete --project <name> --yes [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | **Required.** Slug of the project to delete. |
+    | `--yes` | boolean | — | **Required.** Confirm that you intend to permanently delete the project. The command refuses to run without this flag. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Delete a project permanently
+    compartment project delete --project my-old-app --yes
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  `compartment project delete` permanently deletes the project and all of its data. Consider using `compartment project archive` instead if you want to retain history. Deletion cannot be undone.
+</Warning>

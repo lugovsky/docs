@@ -1,0 +1,59 @@
+---
+title: "compartment init"
+description: "Scaffold a compartment.yml file in your repository root to link a directory to a Compartment project and define its initial service configuration."
+---
+
+`compartment init` writes a `compartment.yml` descriptor file into the current directory. The file links your repository to a named Compartment project and defines a default service entry pointing at the project root. You can then edit the file to add services, configure builds, and set routing rules before running `compartment deploy`.
+
+## Usage
+
+```bash
+compartment init [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--name <slug>` | string | — | Project name slug to use in the generated file. If omitted, Compartment derives a name from the current directory or prompts you interactively. |
+| `--output <format>` | `text` \| `json` | `text` | Output format. Use `json` for machine-readable output in CI pipelines. |
+
+<Note>
+  If `--name` is not provided and the terminal is non-interactive (for example, inside a CI job), Compartment falls back to deriving a slug from the directory name. If it cannot produce a valid slug, the command exits with an error and asks you to re-run with `--name`.
+</Note>
+
+## Generated file
+
+Running `compartment init` creates a `compartment.yml` file similar to the following:
+
+```yaml compartment.yml
+name: my-app
+
+services:
+  web: .
+```
+
+The `name` field is the project slug. The `web` service entry points at the repository root (`.`), using the shorthand path form. Run `compartment descriptor schema` to view the full schema and add additional options such as build strategy, readiness checks, and access modes.
+
+## Examples
+
+<CodeGroup>
+
+```bash Initialize using the directory name
+# Run from your project root; name is derived from the folder
+compartment init
+```
+
+```bash Specify a project name explicitly
+compartment init --name my-api
+```
+
+```bash Output the result as JSON
+compartment init --name my-api --output json
+```
+
+</CodeGroup>
+
+<Tip>
+  After running `compartment init`, open `compartment.yml` and verify the project name and service context are correct before your first deploy. Run `compartment descriptor schema` if you need the full list of available configuration fields.
+</Tip>

@@ -1,0 +1,155 @@
+---
+title: "compartment.yml"
+description: "Complete reference for compartment.yml, the file that links your repository to a Compartment project and declares every deployable service."
+---
+
+`compartment.yml` is the single file Compartment reads to understand your project. It lives at your repository root and declares the project slug, the services you want to deploy, and optional per-service hints for how each one should be built, run, and accessed. Everything else — secrets, environment-specific values, node placement, hosted domains, deployment history, and browser-facing proxy rules — belongs elsewhere.
+
+## Top-level fields
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | Yes | Project slug. Must match `^[a-z][a-z0-9-]{0,62}$`. |
+| `services` | map | Yes | One or more named services. At least one entry is required. |
+
+### `name`
+
+The project slug uniquely identifies your project within Compartment. It must start with a lowercase letter and contain only lowercase letters, digits, and hyphens, up to 63 characters total.
+
+```yaml
+name: internal-tools
+```
+
+### `services`
+
+Each key under `services` is the service name. Service names must match `^[a-z0-9][a-z0-9_-]{0,62}$`. The value can be either a **path string** or a **service config object**.
+
+## Service as a path string
+
+The simplest form is a bare path string pointing to the service's directory relative to the repository root. Compartment applies all defaults for `kind`, `accessMode`, `build`, `run`, and `readiness`.
+
+```yaml
+name: my-app
+
+services:
+  web: .
+```
+
+The `.` path means the service source is the repository root itself. Use a subdirectory path when your service lives in a subdirectory:
+
+```yaml
+services:
+  web: apps/web
+```
+
+## Service config object
+
+When you need to control build strategy, access mode, restart policy, or readiness checks, expand the value to a config object.
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `path` | string | Yes | — | Path to the service directory, relative to the repository root. |
+| `kind` | string | No | `web` | Service kind. One of `web`, `api`, `worker`, `job`, `cron`. |
+| `accessMode` | string | No | `authenticated` | Route access mode. One of `authenticated` or `public`. |
+| `build` | object | No | — | Build configuration. See [Build Options](/configuration/build-options). |
+| `run` | object | No | — | Runtime configuration. Controls the start command and restart policy. |
+| `readiness` | object | No | — | Readiness probe configuration. |
+
+### `run`
+
+The `run` block controls how Compartment starts your service after a successful build.
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | string | No | Override the start command. Railpack services only. |
+| `restart` | object | No | Restart policy configuration. |
+
+**`run.restart`**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `policy` | string | Yes | One of `no`, `on-failure`, `unless-stopped`. Default is `on-failure`. |
+| `maxRetries` | integer | No | Maximum restart attempts. Only valid with `on-failure` policy. |
+
+<Note>
+  `run.command` is only supported when the service build resolves to Railpack. Dockerfile-built services must define their start command inside the Dockerfile.
+</Note>
+
+### `readiness`
+
+The `readiness` block tells Compartment when your service is ready to receive traffic. Currently only HTTP probes are supported.
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `type` | string | Yes | — | Must be `http`. |
+| `path` | string | No | `/healthz` | HTTP path Compartment polls to check readiness. |
+| `timeoutMs` | integer | No | `30000` | Maximum milliseconds to wait for the probe to succeed. Maximum value is `300000`. |
+
+## Examples
+
+### Minimal
+
+The smallest valid `compartment.yml` — one service pointing at the repository root:
+
+```yaml
+name: <project-slug>
+
+services:
+  web: .
+```
+
+### Expanded
+
+A multi-service project showing all available config options:
+
+```yaml
+name: internal-tools
+
+services:
+  web:
+    accessMode: public
+    path: apps/web
+    build:
+      strategy: railpack
+      command: pnpm build
+      env:
+        - VITE_PUBLIC_API_URL
+      packages:
+        build:
+          - build-essential
+        runtime:
+          - libnss3
+    run:
+      command: pnpm start
+      restart:
+        policy: on-failure
+    readiness:
+      type: http
+      path: /ready
+      timeoutMs: 10000
+
+  api:
+    path: apps/api
+    kind: api
+
+  worker:
+    path: apps/worker
+    kind: worker
+```
+
+## What compartment.yml does not own
+
+`compartment.yml` is intentionally narrow in scope. The following concerns are managed separately:
+
+- **Secrets** — managed via the CLI, never committed to the repository
+- **Environment-specific runtime values** — set per environment using variables
+- **Node placement** — controlled by the Compartment platform
+- **Hosted domains** — configured via the CLI
+- **Deployment history** — recorded by the platform
+- **Browser-facing proxy rules** — defined in [`compartment.routes.yml`](/configuration/routes)
+
+## Related files
+
+| File | Purpose |
+| --- | --- |
+| `compartment.routes.yml` | Browser-facing rewrites and proxy rules |

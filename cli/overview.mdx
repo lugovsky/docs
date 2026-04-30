@@ -1,0 +1,122 @@
+---
+title: "CLI overview"
+description: "Install the Compartment CLI, learn its command groups, and use JSON output mode for CI/CD automation and scripting against your self-hosted instance."
+---
+
+The `compartment` CLI is the primary way to interact with a Compartment deployment. You use it to install the platform, authenticate, deploy projects, manage environments, inspect running services, and administer your organization — all from a single binary.
+
+## Installation
+
+You can install the CLI in two ways.
+
+<CodeGroup>
+
+```bash As part of compartment install
+# The CLI is installed automatically when you run the platform installer
+compartment install
+```
+
+```bash Standalone via npm
+npm install -g @compartment/cli
+```
+
+</CodeGroup>
+
+The CLI requires Node.js 20 or later.
+
+<Tip>
+  If you are setting up a new server, run `compartment install` first. It installs the platform and the CLI together. Install the CLI separately only when you need it on a machine that already has a running Compartment instance to connect to.
+</Tip>
+
+## Global options
+
+Every command accepts the following options.
+
+| Option | Values | Description |
+| --- | --- | --- |
+| `--output` | `text`, `json` | Output format. Defaults to `text`. |
+| `--help` | — | Print help for the command or subcommand. |
+
+### JSON output mode
+
+Pass `--output json` to any command to receive machine-readable output. This is useful in CI/CD pipelines, shell scripts, or any tooling that needs to parse command results.
+
+```bash
+compartment whoami --output json
+compartment status --output json
+compartment deploy --output json
+```
+
+## Command groups
+
+Run `compartment --help` to see all top-level commands.
+
+```text
+Usage: compartment [options] [command]
+
+Options:
+  --help           display help for command
+
+Commands:
+  activate         Activate a new account using a bootstrap token
+  auth             Authentication configuration
+  deploy           Deploy the current project
+  descriptor       Manage compartment.yml descriptors
+  init             Initialize a new project
+  inspect          Inspect a running environment
+  install          Install the Compartment platform
+  logs             Stream logs for a running environment
+  login            Log in to a Compartment instance
+  logout           Log out and clear the local session
+  organization     Manage organizations
+  project          Manage projects
+  promote          Promote a deployment to another environment
+  role             Manage roles and access control
+  rollback         Roll back to a previous deployment
+  sso              Configure single sign-on
+  status           Show deployment status
+  system           Manage system-level settings
+  user             Manage users
+  variable         Manage environment variables
+  whoami           Show the current authenticated identity
+```
+
+<Note>
+  Subcommands are organized into groups. Run `compartment <command> --help` to see the subcommands and options available within each group. For example, `compartment variable --help` lists all variable subcommands.
+</Note>
+
+## Command reference
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/cli/authentication">
+    Log in, log out, switch organizations, and activate new accounts.
+  </Card>
+
+  <Card title="deploy" icon="rocket" href="/cli/commands/deploy">
+    Build and deploy the current project from your working directory.
+  </Card>
+
+  <Card title="status" icon="chart-bar" href="/cli/commands/status">
+    Check the deployment status of your project's environments.
+  </Card>
+
+  <Card title="logs" icon="list" href="/cli/commands/logs">
+    Stream or tail logs for a running service environment.
+  </Card>
+
+  <Card title="inspect" icon="magnifying-glass" href="/cli/commands/inspect">
+    Inspect the runtime state of a deployed service.
+  </Card>
+
+  <Card title="variable" icon="brackets-curly" href="/cli/commands/variable">
+    Get, set, and import environment variables for your services.
+  </Card>
+
+  <Card title="promote" icon="arrow-up" href="/cli/commands/promote">
+    Promote a deployment from one environment to another.
+  </Card>
+
+  <Card title="rollback" icon="rotate-left" href="/cli/commands/rollback">
+    Roll back a service to a previous successful deployment.
+  </Card>
+</CardGroup>

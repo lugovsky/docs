@@ -1,0 +1,131 @@
+---
+title: "Install Compartment"
+description: "Run compartment install to set up the Compartment control plane, container runtime, and routing layer on any Linux server running Docker."
+---
+
+Compartment runs entirely on your own infrastructure. The `compartment install` command sets up everything you need — the control plane, container runtime, and TLS-terminating reverse proxy — on any Linux server that has Docker installed. You run this once per server and then deploy applications to it using the CLI from your local machine.
+
+## Prerequisites
+
+Before running `compartment install`, make sure your server meets the following requirements:
+
+- **Docker is installed and running.** Compartment uses Docker as its container runtime. Install Docker by following the [official Docker documentation](https://docs.docker.com/engine/install/).
+- **You have a domain you control** (for a `--base-domain` install), or you are okay with receiving a managed subdomain (for a `--managed-domain` install). See [Choosing a domain mode](#choosing-a-domain-mode) below.
+- **Ports 80 and 443 are reachable** from the internet on your server, or you have configured alternate ports.
+
+<Note>
+  `compartment install` provisions system-level resources including Docker networks, volumes, and service containers. It requires root or sudo access on the target server. Run it as root, or the CLI will automatically re-invoke itself with `sudo` if needed.
+</Note>
+
+<Steps>
+  <Step title="Install the Compartment CLI">
+    Install the `compartment` CLI on the machine from which you will run the install command (typically your server or a bastion host with SSH access to it). Refer to the [CLI overview](/cli/overview) for installation instructions.
+  </Step>
+  <Step title="Choose a domain mode">
+    Compartment needs a base domain to provision URLs for your deployed applications. You have two options:
+
+    **Option A — Your own domain (`--base-domain`)**
+
+    If you own a domain (for example, `acme.com`), point a wildcard DNS record at your server's IP address:
+
+    ```text
+    *.compartment.acme.com  A  <your-server-ip>
+    ```
+
+    Then pass it as the base domain during install. Compartment will issue TLS certificates automatically via Let's Encrypt and route deployed apps under subdomains of that domain.
+
+    **Option B — Managed domain (`--managed-domain`)**
+
+    If you don't have a domain ready, use `--managed-domain`. Compartment allocates a free subdomain under `compartment.run` for your installation. No DNS configuration is required on your side.
+
+    <Info>
+      Managed domains are provisioned through the Compartment broker service. The subdomain is tied to your installation ID and persists across reinstalls as long as you use the same installation.
+    </Info>
+  </Step>
+  <Step title="Run compartment install">
+    SSH into your server and run `compartment install` with the appropriate flags.
+
+    **With your own base domain:**
+
+    ```bash
+    compartment install \
+      --base-domain compartment.acme.com \
+      --email admin@acme.com \
+      --organization acme
+    ```
+
+    **With a managed domain:**
+
+    ```bash
+    compartment install \
+      --managed-domain \
+      --email admin@acme.com \
+      --organization acme
+    ```
+
+    The CLI will prompt you for an admin password if you don't supply one non-interactively. Once you provide your credentials, the install proceeds automatically.
+
+    **What gets installed:**
+
+    - **Control plane** — the Compartment API that manages projects, deployments, environments, and access control.
+    - **Container runtime** — a Docker-based runtime that builds and runs your application containers.
+    - **Routing layer** — a Caddy-based reverse proxy that handles TLS termination, routing live traffic to the correct service version, and health-check-gated promotions.
+
+    Installation typically takes a few minutes. The CLI reports progress as each component comes up.
+  </Step>
+  <Step title="Log in and verify">
+    When the install completes, the CLI prints your installation URL and admin credentials. Log in using the CLI to confirm everything is working:
+
+    ```bash
+    compartment login --email admin@acme.com
+    ```
+
+    After logging in, run `compartment whoami` to verify the session is working correctly.
+  </Step>
+</Steps>
+
+## Install options reference
+
+The following flags are supported by `compartment install`:
+
+| Flag | Description |
+| --- | --- |
+| `--base-domain <domain>` | Base domain for routing. Deployed apps get subdomains under this domain. Mutually exclusive with `--managed-domain`. |
+| `--managed-domain` | Allocate a managed subdomain under `compartment.run`. Mutually exclusive with `--base-domain`. |
+| `--email <email>` | Email address for the first admin account and Let's Encrypt TLS certificates. |
+| `--organization <name>` | Name of the first organization created during install. |
+| `--public-http-port <port>` | Port to listen on for HTTP traffic. Defaults to `80`. |
+| `--public-https-port <port>` | Port to listen on for HTTPS traffic. Defaults to `443`. |
+| `--version <version>` | Platform version to install. Accepts `latest`, `main`, a commit SHA (`sha-<commit>`), or an exact image tag. Defaults to `latest`. |
+| `--output <format>` | Output format: `text` (default) or `json`. |
+
+## Using non-standard ports
+
+If ports 80 and 443 are already in use on your server, or you're running behind a load balancer that handles TLS externally, you can install on alternate ports:
+
+```bash
+compartment install \
+  --base-domain compartment.acme.com \
+  --email admin@acme.com \
+  --organization acme \
+  --public-http-port 8080 \
+  --public-https-port 8443
+```
+
+<Warning>
+  If you use non-standard ports, make sure your DNS configuration, firewall rules, and any upstream load balancers are set up to forward traffic on those ports to the Compartment routing layer.
+</Warning>
+
+## Next steps
+
+With Compartment installed, you're ready to deploy your first application.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Log in, initialize a project, and run your first deploy.
+  </Card>
+
+  <Card title="compartment.yml reference" icon="file-code" href="/configuration/compartment-yml">
+    Learn how to configure services, build strategies, and readiness checks.
+  </Card>
+</CardGroup>

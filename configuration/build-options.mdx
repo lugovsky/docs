@@ -1,0 +1,183 @@
+---
+title: "Build Options"
+description: "Configure how Compartment builds each service: choose a build strategy, set a custom build command, declare APT packages, and expose build-time variables."
+---
+
+The `build` block in a service config tells Compartment how to turn your source code into a runnable image. You can let Compartment choose automatically, force a specific strategy, provide a custom build command, install extra APT packages, and expose runtime variables at compile time. All `build` fields are optional — omitting the block entirely is equivalent to setting `strategy: auto`.
+
+## Fields
+
+| Field | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `strategy` | string | No | `auto` | Build strategy to use. One of `auto`, `dockerfile`, or `railpack`. |
+| `command` | string | No | — | Custom build command. Railpack strategy only. |
+| `env` | string\[\] | No | `[]` | Variable key names to expose during the build step. |
+| `packages` | object | No | — | APT packages to install. Railpack strategy only. |
+| `packages.build` | string\[\] | No | `[]` | APT packages installed in the build stage. |
+| `packages.runtime` | string\[\] | No | `[]` | APT packages installed in the runtime stage. |
+
+## Build strategies
+
+### `auto` (default)
+
+Compartment inspects your service directory and picks the right tool automatically:
+
+- If a `Dockerfile` is present → uses the Dockerfile build.
+- If no `Dockerfile` is present → uses [Railpack](https://railpack.io) to detect your framework and build automatically.
+
+This is the recommended strategy for most projects. You do not need to set `strategy` at all when using auto detection.
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      strategy: auto
+```
+
+### `dockerfile`
+
+Forces Compartment to use the `Dockerfile` in your service directory. The build fails if no `Dockerfile` is present.
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      strategy: dockerfile
+```
+
+<Warning>
+  `command` and `packages` are not supported when using the `dockerfile` strategy. Define your build steps inside the Dockerfile itself. `run.command` is also not supported for Dockerfile-built services — set your start command via `CMD` or `ENTRYPOINT` in the Dockerfile.
+</Warning>
+
+### `railpack`
+
+Forces Compartment to use Railpack regardless of whether a Dockerfile exists. Use this when you want to opt into Railpack's zero-config builds but your repository happens to contain a Dockerfile for a different purpose.
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      strategy: railpack
+```
+
+## Custom build command
+
+Use `command` to override the build command that Railpack runs. This replaces whatever Railpack would infer from your project's framework and package manager.
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      strategy: railpack
+      command: pnpm build
+```
+
+<Note>
+  `command` is only valid for Railpack builds. Setting it alongside `strategy: dockerfile` is a validation error.
+</Note>
+
+## Exposing variables during the build
+
+List variable key names under `env` to make those variables available to the build process. The values must already be set via `compartment variable set` or imported before you deploy.
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      env:
+        - VITE_PUBLIC_API_URL
+        - NEXT_PUBLIC_STRIPE_KEY
+```
+
+Only the variables you list here are injected into the build environment. All other variables remain runtime-only and are not visible during the build step.
+
+## APT packages
+
+Use `packages` to install additional APT packages that your build or runtime image needs. This is useful when a native dependency is not bundled by default in the Railpack base images.
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      packages:
+        build:
+          - build-essential
+        runtime:
+          - libnss3
+```
+
+- `packages.build` — packages installed during the build stage only. They are not present in the final runtime image.
+- `packages.runtime` — packages installed in the runtime stage. They are available when your service runs.
+
+Package names follow the APT naming convention: they must start with a letter or digit and may contain letters, digits, and the characters `.`, `+`, `:`, `=`, `~`, and `-`.
+
+If you specify `packages`, at least one of `build` or `runtime` must contain at least one entry.
+
+<Warning>
+  `packages` is only valid for Railpack builds. Setting it alongside `strategy: dockerfile` is a validation error. Install additional packages in your Dockerfile's `RUN` instructions instead.
+</Warning>
+
+## Complete example
+
+```yaml
+services:
+  web:
+    path: apps/web
+    build:
+      strategy: railpack
+      command: pnpm build
+      env:
+        - VITE_PUBLIC_API_URL
+      packages:
+        build:
+          - build-essential
+        runtime:
+          - libnss3
+```
+
+## Strategy comparison
+
+<Tabs>
+  <Tab title="auto">
+    ```yaml
+    services:
+      web:
+        path: .
+    # No build block needed — auto is the default
+    ```
+
+    Compartment detects the right tool. No configuration required.
+  </Tab>
+  <Tab title="dockerfile">
+    ```yaml
+    services:
+      web:
+        path: .
+        build:
+          strategy: dockerfile
+    ```
+
+    Build steps, start command, and packages are all defined in your Dockerfile.
+  </Tab>
+  <Tab title="railpack">
+    ```yaml
+    services:
+      web:
+        path: apps/web
+        build:
+          strategy: railpack
+          command: pnpm build
+          packages:
+            runtime:
+              - libnss3
+    ```
+
+    Railpack handles the build with optional overrides for command and packages.
+  </Tab>
+</Tabs>

@@ -1,0 +1,55 @@
+---
+title: "Compartment: self-hosted app deployment platform"
+description: "Compartment is a self-hosted deployment platform. Deploy multi-service apps from one CLI with zero-downtime rollouts, built-in environments, variables, and SSO."
+---
+
+Compartment is a self-hosted deployment platform that turns any Git repository into a running application. Define your services in a single `compartment.yml` file, run `compartment deploy`, and Compartment handles building, routing, and promoting your app — with zero downtime.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Deploy your first application in minutes with the Compartment CLI.
+  </Card>
+  <Card title="Installation" icon="server" href="/installation">
+    Install Compartment on your own infrastructure using Docker.
+  </Card>
+  <Card title="Configuration" icon="file-code" href="/configuration/compartment-yml">
+    Learn how to configure services, builds, and routing with `compartment.yml`.
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/overview">
+    Full reference for every Compartment CLI command and flag.
+  </Card>
+</CardGroup>
+
+## How it works
+
+<Steps>
+  <Step title="Install Compartment">
+    Run `compartment install` to deploy the Compartment platform on your server. You'll get a fully working control plane, container runtime, and routing layer.
+  </Step>
+  <Step title="Initialize your project">
+    In your repository, run `compartment init` to create a `compartment.yml` descriptor. This links your repo to a project and defines your services.
+  </Step>
+  <Step title="Deploy your app">
+    Run `compartment deploy` from your project root. Compartment builds your services, runs readiness checks, and promotes them to live traffic automatically.
+  </Step>
+  <Step title="Manage and iterate">
+    Use `compartment status`, `compartment logs`, and `compartment promote` to monitor deployments and ship with confidence using zero-downtime rollouts.
+  </Step>
+</Steps>
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="Multi-service apps" icon="cubes" href="/guides/multi-service">
+    Deploy multiple services from one repository with shared routing and per-service configuration.
+  </Card>
+  <Card title="Zero-downtime deploys" icon="arrow-rotate-right" href="/guides/promote-and-rollback">
+    Candidate builds are promoted only after passing readiness checks. Roll back instantly if needed.
+  </Card>
+  <Card title="Environment variables" icon="key" href="/configuration/variables">
+    Manage plain and sensitive variables scoped to environments or individual services.
+  </Card>
+  <Card title="SSO & access control" icon="shield-halved" href="/guides/sso">
+    Configure OIDC single sign-on and role-based access for your team.
+  </Card>
+</CardGroup>

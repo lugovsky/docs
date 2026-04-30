@@ -1,0 +1,45 @@
+---
+title: "compartment rollback"
+description: "Revert a Compartment environment to its previous active deployment. Target a specific deployment by ID or let Compartment pick the most recent successful one."
+---
+
+`compartment rollback` reverts a project environment to a previous deployment. Use it when a recently promoted deployment shows problems — errors, failed health checks, or unexpected behavior — and you need to restore the last known good version quickly. By default, Compartment selects the most recent successful deployment that preceded the current active one. You can also target a specific deployment by ID using `--to`.
+
+## Usage
+
+```bash
+compartment rollback [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--env <name>` | string | — | Name of the environment to roll back. If omitted, Compartment uses the default environment defined in `compartment.yml`. |
+| `--project <name>` | string | — | Project slug to target. If omitted, Compartment reads the project name from `compartment.yml` in the current directory. |
+| `--service <name>` | string | — | Limit the rollback to a single named service. If omitted, all services in the environment are rolled back together. |
+| `--to <deployment-id>` | string | — | Roll back to a specific deployment ID rather than the automatically selected previous deployment. |
+| `--verbose` | boolean | — | Print rollback progress events to the terminal as they occur. Only applies when `--output` is `text`. |
+| `--output <format>` | `text` \| `json` | `text` | Output format. Use `json` for machine-readable results in CI pipelines. |
+
+## Examples
+
+```bash Roll back the default environment to the previous deployment
+compartment rollback
+```
+
+```bash Roll back a specific environment
+compartment rollback --env production
+```
+
+```bash Roll back to a specific deployment by ID
+compartment rollback --env production --to dep_01j4kx8r3v2n0qcfg7mywbz9e4
+```
+
+<Warning>
+  Rollback switches live traffic immediately once the target deployment passes its readiness checks. If the target deployment fails its health check, the rollback itself fails and the current active deployment stays live.
+</Warning>
+
+<Note>
+  If you run `compartment rollback` without `--project`, the command looks for a `compartment.yml` file in the current directory. Run from your repository root, or pass `--project` explicitly when running from another location.
+</Note>

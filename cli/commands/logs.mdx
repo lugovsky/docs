@@ -1,0 +1,65 @@
+---
+title: "compartment logs"
+description: "Fetch or continuously stream log lines from active Compartment service deployments, with timestamps, service names, and stream type for each line."
+---
+
+`compartment logs` retrieves log output from the active deployment of one or more services in a Compartment environment. Each log line includes a timestamp, the service name, and the stream it came from — `compartment` (platform events), `stdout`, or `stderr`. Pass `--follow` to keep the stream open and continuously poll for new lines until you press `Ctrl+C`.
+
+## Usage
+
+```bash
+compartment logs [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--project <name>` | string | — | Project to query. Defaults to the name in `compartment.yml` when run from a project directory. |
+| `--env <name>` | string | `production` | Environment whose active deployment to read logs from. |
+| `--service <name>` | string | — | Limit output to a single named service. |
+| `--follow` | boolean | `false` | Poll for new log lines and keep streaming until the process is interrupted. Cannot be combined with `--output json`. |
+| `--verbose` | boolean | `false` | Print deployment details above the log lines. |
+| `--output <format>` | `text` \| `json` | `text` | Output format for the fetched log snapshot. Not compatible with `--follow`. |
+
+## Log streams
+
+Compartment captures three distinct streams for every deployment:
+
+| Stream | Description |
+| --- | --- |
+| `compartment` | Platform-level events — container lifecycle, health checks, and promotion stage transitions. |
+| `stdout` | Standard output written by your application process. |
+| `stderr` | Standard error written by your application process. |
+
+Each line is labelled with its stream so you can distinguish application output from platform events at a glance.
+
+## Examples
+
+<CodeGroup>
+
+```bash Print recent logs from the current project
+compartment logs
+```
+
+```bash Follow logs in real time
+compartment logs --follow
+```
+
+```bash Stream logs for a specific service in staging
+compartment logs --service api --env staging --follow
+```
+
+```bash Capture a log snapshot as JSON
+compartment logs --output json
+```
+
+</CodeGroup>
+
+<Note>
+  `--follow` and `--output json` cannot be used together. If you need machine-readable output, omit `--follow` and capture the snapshot with `--output json` instead.
+</Note>
+
+<Tip>
+  Press `Ctrl+C` to stop a `--follow` session cleanly. The CLI exits gracefully without printing an error.
+</Tip>

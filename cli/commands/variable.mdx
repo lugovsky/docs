@@ -1,0 +1,173 @@
+---
+title: "compartment variable"
+description: "Set, list, inspect, import, and remove runtime variables for Compartment services. Scope variables to an environment or a specific service."
+---
+
+`compartment variable` is a subcommand group for managing the runtime environment variables that Compartment injects into your services. Variables can be scoped to the whole project, a specific environment, or a specific service within an environment. Sensitive variables are stored encrypted and their values are hidden in list and show output after they are set.
+
+## Sensitivity levels
+
+Every variable has a sensitivity level:
+
+- **`plain`** — the value is visible in list and show output. Use this for non-secret configuration like feature flags or log levels.
+- **`sensitive`** — the value is stored encrypted and masked in output. Use this for secrets like API keys, database passwords, or tokens. Pass `--sensitive` when setting or importing to mark a variable as sensitive.
+
+## Scope
+
+Variables are resolved from the narrowest scope outward. A variable set on a specific service overrides one set on the environment, which overrides one set on the project. Use `--env` and `--service` together to set a variable that applies only to one service in one environment.
+
+## Subcommands
+
+<Tabs>
+  <Tab title="set">
+    Set or update a single variable. The value can be passed as a positional argument, read from standard input with `--stdin`, or entered interactively if neither is provided and the flag `--sensitive` is used.
+
+    ```bash
+    compartment variable set <KEY> [value] [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Project slug. If omitted, read from `compartment.yml`. |
+    | `--env <name>` | string | — | Environment name to scope the variable to. |
+    | `--service <name>` | string | — | Service name to scope the variable to. |
+    | `--sensitive` | boolean | — | Mark the variable as sensitive. Its value will be masked in all output after being set. |
+    | `--stdin` | boolean | — | Read the value from standard input instead of a positional argument. Useful for piping secrets. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Set a plain variable for the whole project
+    compartment variable set LOG_LEVEL debug --project my-app
+    ```
+
+    ```bash Set a sensitive variable scoped to an environment
+    compartment variable set DATABASE_URL "postgres://..." --project my-app --env production --sensitive
+    ```
+
+    ```bash Pipe a secret from a file into a sensitive variable
+    cat /run/secrets/api_key | compartment variable set API_KEY --project my-app --env production --sensitive --stdin
+    ```
+  </Tab>
+  <Tab title="list">
+    List all variables visible to a given project, environment, or service scope. Sensitive variable values are masked in output.
+
+    ```bash
+    compartment variable list [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Project slug. If omitted, read from `compartment.yml`. |
+    | `--env <name>` | string | — | Filter to variables scoped to this environment. |
+    | `--service <name>` | string | — | Filter to variables scoped to this service. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash List all variables for a project
+    compartment variable list --project my-app
+    ```
+
+    ```bash List variables scoped to a specific environment
+    compartment variable list --project my-app --env production
+    ```
+
+    ```bash List variables for a specific service in an environment
+    compartment variable list --project my-app --env production --service api
+    ```
+  </Tab>
+  <Tab title="show">
+    Show details for a single variable by key name, including its scope, sensitivity level, and (for plain variables) its current value.
+
+    ```bash
+    compartment variable show <KEY> [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Project slug. If omitted, read from `compartment.yml`. |
+    | `--env <name>` | string | — | Scope to look up the variable in. |
+    | `--service <name>` | string | — | Service scope to look up the variable in. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Show a variable at the project level
+    compartment variable show LOG_LEVEL --project my-app
+    ```
+
+    ```bash Show a variable in a specific environment
+    compartment variable show DATABASE_URL --project my-app --env production
+    ```
+  </Tab>
+  <Tab title="import">
+    Import multiple variables at once from a file. The file must contain one `KEY=VALUE` pair per line in `.env` format. Use `--replace` to overwrite any existing variables that share the same key and scope.
+
+    ```bash
+    compartment variable import --file <path> [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--file <path>` | string | — | **Required.** Path to the `.env`-format file to import from. |
+    | `--project <name>` | string | — | Project slug. If omitted, read from `compartment.yml`. |
+    | `--env <name>` | string | — | Environment scope to import variables into. |
+    | `--service <name>` | string | — | Service scope to import variables into. |
+    | `--replace` | boolean | — | Overwrite existing variables that share the same key. Without this flag, existing variables are skipped. |
+    | `--sensitive` | boolean | — | Mark all imported variables as sensitive. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Import variables from a .env file
+    compartment variable import --file .env.production --project my-app --env production
+    ```
+
+    ```bash Import and overwrite existing variables, marking all as sensitive
+    compartment variable import --file secrets.env --project my-app --env production --replace --sensitive
+    ```
+  </Tab>
+  <Tab title="remove">
+    Remove a variable by key name. You must specify the same scope (`--env`, `--service`) that was used when the variable was set.
+
+    ```bash
+    compartment variable remove <KEY> [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--project <name>` | string | — | Project slug. If omitted, read from `compartment.yml`. |
+    | `--env <name>` | string | — | Environment scope the variable belongs to. |
+    | `--service <name>` | string | — | Service scope the variable belongs to. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Remove a project-level variable
+    compartment variable remove LOG_LEVEL --project my-app
+    ```
+
+    ```bash Remove a variable scoped to a specific environment
+    compartment variable remove DATABASE_URL --project my-app --env production
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Removing a variable is immediate and irreversible. If the deleted variable was providing configuration to a running service, you may need to redeploy or rollback to restore a working state.
+</Warning>
+
+<Note>
+  Variable changes take effect on the next deployment. Services that are already running do not pick up new or removed variables until the service is redeployed or restarted.
+</Note>

@@ -1,0 +1,219 @@
+---
+title: "Service"
+description: "A service is one deployable unit inside a Compartment project. Learn about service kinds, naming rules, build and run config, and access modes."
+---
+
+A service in Compartment is the smallest deployable unit — one process, one container, one entry in your `compartment.yml`. Every project contains at least one service, and most production applications define several: a frontend, an API, a background worker, and so on. Each service has its own build pipeline, runtime configuration, readiness check, and deployment lifecycle, all scoped to the project it belongs to.
+
+## Service names
+
+Service names identify a service within a project and must match the pattern `^[a-z0-9][a-z0-9_-]{0,62}$`, which means:
+
+- starts with a lowercase letter or digit
+- contains only lowercase letters, digits, underscores, and hyphens
+- is at most 63 characters long
+
+Service names are stable identifiers: they appear in deployment logs, CLI output, environment variable scoping, and route URLs. Choose names that reflect the service's role.
+
+```yaml compartment.yml
+name: my-app
+
+services:
+  web: .         # shorthand: just a path
+  api:           # full config form
+    path: ./services/api
+    kind: api
+  worker:
+    path: ./services/worker
+    kind: worker
+```
+
+## Service kinds
+
+The `kind` field tells Compartment what type of process this service is and how to treat it at runtime. When omitted, the kind defaults to `web`.
+
+| Kind | HTTP routable | Description |
+| --- | :-: | --- |
+| `web` | yes | A user-facing application served over HTTP. Gets a public or authenticated route URL. |
+| `api` | yes | A backend API served over HTTP. Gets a route URL, typically accessed by other services or the CLI. |
+| `worker` | no | A long-running background process. No route URL is assigned. |
+| `job` | no | A one-shot task that runs to completion. No route URL. |
+| `cron` | no | A scheduled task driven by a time expression. No route URL. |
+
+<Info>
+  `web` and `api` are the only routable kinds. Compartment assigns a `routeUrl` only to deployments of these two kinds.
+</Info>
+
+## Shorthand vs. full config
+
+You can declare a service in two forms. The shorthand form accepts a bare path string and inherits all defaults. The full config form lets you override every option.
+
+<CodeGroup>
+
+```yaml Shorthand (path only)
+services:
+  web: .
+```
+
+```yaml Full config
+services:
+  web:
+    path: apps/web
+    kind: web
+    accessMode: public
+    build:
+      strategy: railpack
+      command: pnpm build
+      env:
+        - VITE_PUBLIC_API_URL
+    run:
+      command: pnpm start
+      restart:
+        policy: on-failure
+    readiness:
+      type: http
+      path: /ready
+      timeoutMs: 10000
+```
+
+</CodeGroup>
+
+## Path
+
+The `path` field is required in full config form. It points to the directory within the repository that contains the service's source code, relative to the repository root. Compartment uses this directory as the build context.
+
+```yaml compartment.yml
+services:
+  backoffice:
+    kind: api
+    path: ./services/backoffice
+    readiness:
+      type: http
+      path: /ready
+      timeoutMs: 30000
+```
+
+## Build config
+
+The `build` block tells Compartment how to compile or package the service. When omitted, Compartment applies its default build strategy automatically.
+
+```yaml compartment.yml
+services:
+  web:
+    path: apps/web
+    build:
+      strategy: railpack
+      command: pnpm build
+      env:
+        - VITE_PUBLIC_API_URL
+      packages:
+        build:
+          - build-essential
+        runtime:
+          - libnss3
+```
+
+<Tip>
+  The `build.env` list passes the named environment variables from the current environment's variable store into the build step. Only variables you explicitly list here are available during the build.
+</Tip>
+
+## Run config
+
+The `run` block controls how the built container starts. It supports a custom start command and a restart policy.
+
+```yaml compartment.yml
+services:
+  web:
+    path: apps/web
+    run:
+      command: pnpm start
+      restart:
+        policy: on-failure
+```
+
+<Note>
+  `run.command` is only supported when the service build resolves to Railpack. If you use `build.strategy: dockerfile`, omit `run.command` and define the entrypoint in your `Dockerfile` instead.
+</Note>
+
+## Readiness config
+
+The `readiness` block defines how Compartment determines that a newly deployed service is healthy before routing traffic to it. This is the mechanism that enables zero-downtime deployments.
+
+```yaml compartment.yml
+services:
+  web:
+    path: ./services/web
+    readiness:
+      type: http
+      path: /healthz
+      timeoutMs: 30000
+```
+
+When a new deployment reaches the `checking_readiness` promotion stage, Compartment polls the configured endpoint until it responds successfully or the timeout expires. If the check passes, the deployment advances to `switching_route` and takes over live traffic. If it fails, the deployment is marked unhealthy and the previous active deployment continues serving traffic.
+
+## Access mode
+
+The `accessMode` field applies to routable services (`web` and `api`) and controls whether the route URL requires authentication.
+
+| Value | Behavior |
+| --- | --- |
+| `public` | The route URL is accessible without authentication. |
+| `authenticated` | The route URL requires a valid session. This is the default. |
+
+```yaml compartment.yml
+services:
+  web:
+    path: apps/web
+    accessMode: public   # anyone can reach this URL
+  api:
+    path: apps/api
+    kind: api
+    # accessMode defaults to "authenticated"
+```
+
+<Warning>
+  `accessMode` is a hint stored in `compartment.yml`. It does not replace network-level access controls. For sensitive internal APIs, use private networking in addition to the `authenticated` access mode.
+</Warning>
+
+## Multi-service example
+
+The following example, drawn from the Compartment multi-service sample, shows two routable services in a single project, each with its own path and readiness probe:
+
+```yaml compartment.yml
+name: multi-service
+
+services:
+  web:
+    path: ./services/web
+    readiness:
+      type: http
+      path: /healthz
+      timeoutMs: 30000
+  backoffice:
+    kind: api
+    path: ./services/backoffice
+    readiness:
+      type: http
+      path: /ready
+      timeoutMs: 30000
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Projects" icon="folder" href="/concepts/projects">
+    Understand how projects group services and link to your repository.
+  </Card>
+
+  <Card title="Deployments" icon="arrow-up-from-bracket" href="/concepts/deployments">
+    Follow the full lifecycle of a service deployment from build to live traffic.
+  </Card>
+
+  <Card title="Service kinds reference" icon="list" href="/configuration/service-kinds">
+    Detailed reference for all service kind behaviors and constraints.
+  </Card>
+
+  <Card title="Build options" icon="hammer" href="/configuration/build-options">
+    Full reference for build strategies, packages, and environment variable injection.
+  </Card>
+</CardGroup>

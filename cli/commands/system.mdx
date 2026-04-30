@@ -1,0 +1,163 @@
+---
+title: "compartment system"
+description: "Check system service health, update Compartment to a new version, restart all services, and manage the installation domain from the CLI."
+---
+
+`compartment system` is a subcommand group for administering the Compartment platform itself, as opposed to the projects and deployments running on it. Use these commands to check the health of the installation, update to a new version, restart services after a configuration change, or reconfigure the domain that Compartment is served from. These commands run on the server hosting Compartment and may require elevated privileges.
+
+## Subcommands
+
+<Tabs>
+  <Tab title="status">
+    Report the health of all system services in the Compartment installation. Use this command to confirm that the control plane, routing layer, and container runtime are all running correctly.
+
+    ```bash
+    compartment system status [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. Use `json` to parse service health programmatically. |
+
+    ### Examples
+
+    ```bash Check system health
+    compartment system status
+    ```
+
+    ```bash Check system health and output as JSON
+    compartment system status --output json
+    ```
+  </Tab>
+  <Tab title="update">
+    Update Compartment to a new version. The command pulls the specified image version, applies the update, and restarts affected services. If `--version` is omitted, Compartment updates to the latest stable release.
+
+    ```bash
+    compartment system update [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--version <version>` | string | `latest` | Target version to update to. Accepts `latest`, `main`, `sha-<commit>`, or an exact image tag. |
+    | `--image-source <source>` | `registry` \| `local` | `registry` | Where to pull the update images from. Use `local` if the images are already present on the machine. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Update to the latest stable release
+    compartment system update
+    ```
+
+    ```bash Update to a specific version
+    compartment system update --version 1.5.0
+    ```
+  </Tab>
+  <Tab title="restart">
+    Restart all Compartment system services. Use this after a manual configuration change, or to recover from an unexpected service failure without running a full update.
+
+    ```bash
+    compartment system restart [options]
+    ```
+
+    ### Options
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### Examples
+
+    ```bash Restart all system services
+    compartment system restart
+    ```
+
+    <Warning>
+      Restarting system services causes a brief interruption to the control plane and routing layer. Running deployments are not affected — only new deploys, promotes, or rollbacks initiated during the restart window will be delayed.
+    </Warning>
+  </Tab>
+  <Tab title="domain">
+    Manage the base domain for the Compartment installation. The `domain` subcommand group lets you view the current domain configuration, set a new base domain, manage TLS, attach a custom certificate, verify DNS, and activate a new domain setup.
+
+    ```bash
+    compartment system domain <subcommand> [options]
+    ```
+
+    ### domain status
+
+    Show the current domain configuration and setup state.
+
+    ```bash
+    compartment system domain status [--output <format>]
+    ```
+
+    ### domain set
+
+    Set a new base domain for the installation. All project environments will be served as subdomains of this domain after the change takes effect.
+
+    ```bash
+    compartment system domain set --base-domain <domain> [options]
+    ```
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--base-domain <domain>` | string | — | **Required.** The new base domain, for example `deploy.example.com`. |
+    | `--public-scheme <scheme>` | `http` \| `https` | `https` | The public URL scheme to use for project URLs. |
+    | `--tls <mode>` | `external` \| `custom-cert` | `external` | TLS mode. Use `external` when TLS is terminated upstream, or `custom-cert` to attach your own certificate. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### domain attach-cert
+
+    Attach a custom TLS certificate to the installation. Provide a full-chain PEM certificate file and a matching private key file.
+
+    ```bash
+    compartment system domain attach-cert --cert-file <path> --key-file <path> [options]
+    ```
+
+    | Flag | Type | Default | Description |
+    | --- | --- | --- | --- |
+    | `--cert-file <path>` | string | — | **Required.** Path to the full-chain PEM certificate file. |
+    | `--key-file <path>` | string | — | **Required.** Path to the private key PEM file. |
+    | `--expected-version <version>` | string | — | Domain setup version for optimistic concurrency. |
+    | `--output <format>` | `text` \| `json` | `text` | Output format. |
+
+    ### domain verify
+
+    Verify that DNS for the configured domain resolves correctly.
+
+    ```bash
+    compartment system domain verify [--expected-version <version>] [--output <format>]
+    ```
+
+    ### domain activate
+
+    Activate a pending domain configuration after verification passes.
+
+    ```bash
+    compartment system domain activate [--expected-version <version>] [--output <format>]
+    ```
+
+    ### Examples
+
+    ```bash View the current domain configuration
+    compartment system domain status
+    ```
+
+    ```bash Set a new base domain with external TLS
+    compartment system domain set --base-domain deploy.example.com
+    ```
+
+    ```bash Attach a custom certificate
+    compartment system domain attach-cert \
+      --cert-file /etc/ssl/certs/fullchain.pem \
+      --key-file /etc/ssl/private/privkey.pem
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  System commands operate directly on the host running Compartment and may require `sudo` depending on your server configuration. The CLI automatically re-runs with elevated privileges if the initial attempt fails due to insufficient permissions.
+</Note>

@@ -1,0 +1,158 @@
+---
+title: "compartment.routes.yml"
+description: "Reference for compartment.routes.yml, the optional file that defines browser-facing path rewrites and proxy rules between your services."
+---
+
+`compartment.routes.yml` is an optional file you place at your repository root alongside `compartment.yml`. When present, it defines how incoming browser requests are routed across your services — for example, forwarding `/api/*` from your web frontend to a dedicated API service. If you only have a single service and no cross-service routing needs, you can omit this file entirely.
+
+## File structure
+
+The file has two top-level fields:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `version` | integer | Yes | Must be `1`. |
+| `routes` | array | Yes | One or more route rules. Must not be empty. |
+
+```yaml
+version: 1
+
+routes:
+  - on: web
+    path: /api/*
+    to: api
+    stripPrefix: /api
+
+  - on: web
+    path: /health
+    to: api
+    rewrite: /ready
+```
+
+## Route rule fields
+
+Each entry in the `routes` array is a route rule.
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `on` | string | Yes | The source service that receives the incoming request. Must be a valid service name from `compartment.yml`. |
+| `path` | string | Yes | The path pattern to match. Must start with `/`. |
+| `to` | string | Yes | The target service that handles the request. Must be a valid service name from `compartment.yml`. |
+| `methods` | string\[\] | No | Limit matching to specific HTTP methods. When omitted, all methods match. |
+| `stripPrefix` | string | No | Remove this prefix from the request path before forwarding. |
+| `replacePrefix` | string | No | Swap the matched prefix for a new prefix before forwarding. |
+| `rewrite` | string | No | Replace the entire request path before forwarding. |
+
+<Note>
+  Only `web` and `api` services can appear as `on` or `to` values. Worker, job, and cron services are not routable.
+</Note>
+
+## Path forms
+
+A route path can take one of two forms:
+
+| Form | Example | Matches |
+| --- | --- | --- |
+| Exact path | `/health` | Only the path `/health`, nothing deeper. |
+| Prefix path | `/api/*` | The prefix `/api` itself and any deeper path such as `/api/users`. |
+
+A prefix path must end with `/*`. An exact path must not end with `/*`.
+
+## HTTP method filtering
+
+Use the `methods` field to restrict a rule to specific HTTP verbs. Supported methods are `DELETE`, `GET`, `HEAD`, `OPTIONS`, `PATCH`, `POST`, and `PUT`. Method filtering runs before path rewriting, so a request that does not match the method list is not affected by the rule.
+
+```yaml
+routes:
+  - on: web
+    path: /api/*
+    to: api
+    methods:
+      - GET
+      - POST
+    stripPrefix: /api
+```
+
+## Path transforms
+
+Each rule may include at most one transform field. Combining multiple transform fields on the same rule is not allowed.
+
+| Transform | Description |
+| --- | --- |
+| `rewrite` | Replaces the entire upstream path with the given concrete path. |
+| `stripPrefix` | Removes the matched prefix from the path before forwarding. |
+| `replacePrefix` | Swaps the matched prefix for a different prefix before forwarding. |
+
+When no transform is set, the original request path is forwarded to the target service unchanged. Query strings are preserved in all cases.
+
+<Warning>
+  Transform paths must be concrete upstream paths. They must not end with `/*`. `stripPrefix` and `replacePrefix` require a prefix path (one ending with `/*`) as the route `path`. `stripPrefix` must exactly match the route path prefix.
+</Warning>
+
+## Matching semantics
+
+Rules are evaluated in the order they appear in the file. The first rule that matches the incoming request wins — no subsequent rules are evaluated. Keep more specific rules above more general ones.
+
+- Exact paths match only that exact path.
+- Prefix paths (`/*`) match the prefix itself or any deeper path.
+- Method filtering runs before path rewriting.
+- Query strings are preserved when a rule rewrites the path.
+
+## Examples
+
+<CodeGroup>
+
+```yaml Prefix proxy with strip
+version: 1
+
+routes:
+  - on: web
+    path: /api/*
+    to: backoffice
+    stripPrefix: /api
+```
+
+```yaml Exact path rewrite
+version: 1
+
+routes:
+  - on: web
+    path: /health
+    to: api
+    rewrite: /ready
+```
+
+```yaml Multiple rules
+version: 1
+
+routes:
+  - on: web
+    path: /api/*
+    to: api
+    stripPrefix: /api
+
+  - on: web
+    path: /health
+    to: api
+    rewrite: /ready
+```
+
+</CodeGroup>
+
+## Validation notes
+
+Compartment validates `compartment.routes.yml` on every deployment. The following rules must all be satisfied:
+
+- `version` must be `1`
+- `routes` must be a non-empty array
+- Every `path` must start with `/`
+- Transform paths must be concrete upstream paths and must not end with `/*`
+- Only one of `rewrite`, `stripPrefix`, or `replacePrefix` may be set per rule
+- `stripPrefix` and `replacePrefix` require a prefix path ending with `/*`
+- `stripPrefix` must exactly match the route path prefix
+- `on` and `to` must exist as service names in `compartment.yml`
+- Only `web` and `api` services are currently routable as `on` or `to`
+
+## Relation to compartment.yml
+
+`compartment.routes.yml` is a companion to `compartment.yml` — it reads service names from `compartment.yml` but controls routing concerns that `compartment.yml` deliberately does not own. Changes to either file take effect on the next deployment.

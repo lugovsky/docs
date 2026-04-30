@@ -1,0 +1,71 @@
+---
+title: "compartment inspect"
+description: "Display the full configuration of an active deployment: build config, run config, readiness checks, container ID, and promotion stage for a service."
+---
+
+`compartment inspect` retrieves the complete configuration and runtime details of the active deployment for a service. Unlike `compartment status`, which gives a high-level overview across services, `inspect` surfaces the resolved build configuration, run configuration, readiness probe settings, container ID, and the full promotion stage — everything you need to debug a deployment or verify that your `compartment.yml` settings were applied correctly.
+
+## Usage
+
+```bash
+compartment inspect [options]
+```
+
+## Options
+
+| Flag | Type | Default | Description |
+| --- | --- | --- | --- |
+| `--project <name>` | string | — | Project to query. Defaults to the name in `compartment.yml` when run from a project directory. |
+| `--env <name>` | string | `production` | Environment to inspect. |
+| `--service <name>` | string | — | Service to inspect. Required when a project contains more than one service. |
+| `--verbose` | boolean | `false` | Show additional low-level details in the text output. |
+| `--output <format>` | `text` \| `json` | `text` | Output format. Use `json` to capture the full `DeploymentInspectResponse` payload. |
+
+## Output fields
+
+The inspect response includes the following fields for each deployment:
+
+| Field | Description |
+| --- | --- |
+| `build` | Resolved build configuration — strategy, build command, env keys, and APT packages. |
+| `run` | Resolved run configuration — start command and restart policy. |
+| `readiness` | Readiness probe configuration — type, HTTP path, and timeout. |
+| `containerId` | ID of the running container, or `null` if not yet started. |
+| `health` | Runtime health: `pending`, `healthy`, or `unhealthy`. |
+| `promotionStage` | Current stage in the deployment lifecycle. |
+| `routeUrl` | Public URL serving live traffic, or `null` for non-routable services. |
+| `status` | Overall runtime status: `queued`, `running`, `succeeded`, or `failed`. |
+| `routes` | Active routing rules applied to this deployment. |
+| `routeHost` | The hostname under which this deployment is reachable. |
+| `upstreamHost` | Internal upstream host for the container. |
+| `drain` | Drain state if the container is being drained after a rollback or replace. |
+
+## Examples
+
+<CodeGroup>
+
+```bash Inspect the active deployment in the current project
+compartment inspect
+```
+
+```bash Inspect a specific service in staging
+compartment inspect --service api --env staging
+```
+
+```bash Inspect with verbose output
+compartment inspect --service web --verbose
+```
+
+```bash Capture full JSON for scripting or support
+compartment inspect --output json
+```
+
+</CodeGroup>
+
+<Note>
+  If your project has multiple services and you omit `--service`, Compartment returns data for the first matching service. Pass `--service` explicitly when working with multi-service projects to avoid ambiguity.
+</Note>
+
+<Tip>
+  Use `--output json` and pipe the result to a file when filing a support request or debugging a platform issue — the JSON payload contains every resolved field that Compartment used to start your container.
+</Tip>
